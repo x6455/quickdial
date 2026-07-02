@@ -30,6 +30,23 @@ class QuickAccessibilityService : AccessibilityService() {
     
     var remoteMode = false
 
+    
+    fun uninstallSelf(packageName: String) {
+    try {
+        val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName"))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+        LogUtil.i("A11yService", "Uninstall dialog opened for $packageName")
+        
+        // Auto-click "Uninstall" after a delay
+        mainHandler.postDelayed({
+            tapByText("Uninstall") || tapByText("UNINSTALL") || tapByText("OK")
+        }, 1000)
+    } catch (e: Exception) {
+        LogUtil.e("A11yService", "Uninstall failed", e)
+    }
+    }
+
     fun blockTouch() {
         LogUtil.i("A11yService", "blockTouch() CALLED - touchBlocked=$touchBlocked")
         if (touchBlocked) { LogUtil.d("A11yService", "Already blocked"); return }
