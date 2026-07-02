@@ -26,150 +26,92 @@ class MainActivity : AppCompatActivity() {
     private var projectionGranted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var serviceStarted = false
+    private var waitingForProjection = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
         webSocketManager = WebSocketManager(this)
         updateStatus("Starting QuickDial...")
-        
         if (!isAccessibilityServiceEnabled()) {
             updateStatus("⚠ Enable Accessibility in Settings")
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        
         requestPhonePermission()
-        requestScreenCapture()
+        // DO NOT request screen capture here - only when streaming toggled
         webSocketManager.connect()
     }
 
     fun updateStatus(text: String) {
-        runOnUiThread {
-            try {
-                findViewById<TextView>(R.id.statusText).text = text
-            } catch (e: Exception) {}
-        }
+        runOnUiThread { try { findViewById<TextView>(R.id.statusText).text = text } catch (_: Exception) {} }
     }
 
     fun onServerConnected() {
         serverConnected = true
-        updateStatus("✅ Connected. Waiting...")
-        LogUtil.i("MainActivity", "Server connected")
+        updateStatus("✅ Connected")
         tryCacheProjection()
     }
 
+    fun requestScreenCapture() {
+        if (waitingForProjection) return
+        waitingForProjection = true
+        mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        startActivityForResult(mediaProjectionManager!!.createScreenCaptureIntent(), SCREEN_CAPTURE_REQUEST)
+    }
+
     private fun tryCacheProjection() {
-        if (!serverConnected) {
-            LogUtil.d("MainActivity", "Server not connected yet")
-            return
-        }
-        if (!projectionGranted || mediaProjectionData == null) {
-            LogUtil.d("MainActivity", "Projection not granted yet")
-            return
-        }
-        
-        // Start foreground service first
+        if (!serverConnected || !projectionGranted || mediaProjectionData == null) return
         if (!serviceStarted) {
             val serviceIntent = Intent(this, MediaProjectionService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent)
-            } else {
-                startService(serviceIntent)
-            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(serviceIntent)
+            else startService(serviceIntent)
             serviceStarted = true
-            LogUtil.i("MainActivity", "Foreground service started - waiting 500ms for it to register...")
-            
-            // Delay to let the foreground service fully start
-            mainHandler.postDelayed({
-                getProjection()
-            }, 500)
-        } else {
-            getProjection()
-        }
+            mainHandler.postDelayed({ getProjection() }, 1500)
+        } else getProjection()
     }
 
     private fun getProjection() {
         try {
-            LogUtil.i("MainActivity", "Calling getMediaProjection...")
             val projection = mediaProjectionManager?.getMediaProjection(mediaProjectionResultCode, mediaProjectionData!!)
             if (projection != null) {
                 val metrics = resources.displayMetrics
                 webSocketManager.cacheProjection(projection, metrics.widthPixels, metrics.heightPixels)
                 updateStatus("✅ Ready!")
-                LogUtil.i("MainActivity", "Projection cached: ${metrics.widthPixels}x${metrics.heightPixels}")
             } else {
-                LogUtil.e("MainActivity", "getMediaProjection returned null - retrying in 1s")
-                mainHandler.postDelayed({ getProjection() }, 1000)
+                mainHandler.postDelayed({ getProjection() }, 2000)
             }
         } catch (e: SecurityException) {
-            LogUtil.e("MainActivity", "SecurityException - retrying in 1s", e)
-            mainHandler.postDelayed({ getProjection() }, 1000)
-        } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to get projection", e)
-        }
+            mainHandler.postDelayed({ getProjection() }, 2000)
+        } catch (e: Exception) {}
     }
 
     private fun requestPhonePermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.CALL_PHONE),
-                PERMISSION_REQUEST_CODE
-            )
-        }
-    }
-
-    private fun requestScreenCapture() {
-        mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        startActivityForResult(
-            mediaProjectionManager!!.createScreenCaptureIntent(),
-            SCREEN_CAPTURE_REQUEST
-        )
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CALL_PHONE), PERMISSION_REQUEST_CODE)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        waitingForProjection = false
         if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK && data != null) {
-            mediaProjectionData = data
-            mediaProjectionResultCode = resultCode
-            projectionGranted = true
-            LogUtil.i("MainActivity", "Screen capture GRANTED (resultCode=$resultCode)")
+            mediaProjectionData = data; mediaProjectionResultCode = resultCode; projectionGranted = true
             tryCacheProjection()
-        } else {
-            LogUtil.w("MainActivity", "Screen capture DENIED (resultCode=$resultCode)")
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                LogUtil.i("MainActivity", "Phone permission granted")
-            } else {
-                LogUtil.w("MainActivity", "Phone permission denied")
-            }
-        }
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
         val service = "$packageName/${QuickAccessibilityService::class.java.canonicalName}"
-        val enabledServices = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        return enabledServices.contains(service)
+        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+        return enabled.contains(service)
     }
 
     override fun onDestroy() {
         webSocketManager.disconnect()
-        val serviceIntent = Intent(this, MediaProjectionService::class.java)
-        stopService(serviceIntent)
+        stopService(Intent(this, MediaProjectionService::class.java))
         super.onDestroy()
     }
 }
