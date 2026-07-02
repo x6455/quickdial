@@ -18,18 +18,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webSocketManager: WebSocketManager
     private var mediaProjectionData: Intent? = null
     private var mediaProjectionManager: MediaProjectionManager? = null
-    private var serverReady = false
-    private var projectionReady = false
+    private var hasProjection = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        webSocketManager = WebSocketManager(this)
         
+        webSocketManager = WebSocketManager(this)
         updateStatus("Starting QuickDial...")
         
         if (!isAccessibilityServiceEnabled()) {
-            updateStatus("⚠ Enable Accessibility Service first")
+            updateStatus("⚠ Enable Accessibility in Settings")
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         
@@ -47,19 +46,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onServerConnected() {
-        serverReady = true
         updateStatus("✅ Connected. Waiting for remote mode...")
-        tryStartCapture()
+        LogUtil.i("MainActivity", "Server connected, projection ready: $hasProjection")
     }
 
-    private fun tryStartCapture() {
-        if (serverReady && projectionReady) {
-            val intent = mediaProjectionData ?: return
-            val projection = mediaProjectionManager?.getMediaProjection(RESULT_OK, intent)
-            projection?.let { proj ->
+    private fun tryCacheProjection() {
+        if (mediaProjectionData != null && !hasProjection) {
+            val projection = mediaProjectionManager?.getMediaProjection(RESULT_OK, mediaProjectionData!!)
+            if (projection != null) {
+                hasProjection = true
                 val metrics = resources.displayMetrics
-                webSocketManager.startScreenCapture(proj, metrics.widthPixels, metrics.heightPixels)
-                updateStatus("✅ Ready for remote control")
+                webSocketManager.cacheProjection(projection, metrics.widthPixels, metrics.heightPixels)
+                updateStatus("✅ Ready. Toggle remote mode from dashboard.")
+                LogUtil.i("MainActivity", "Projection cached: ${metrics.widthPixels}x${metrics.heightPixels}")
             }
         }
     }
@@ -87,8 +86,23 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK && data != null) {
             mediaProjectionData = data
-            projectionReady = true
-            tryStartCapture()
+            LogUtil.i("MainActivity", "Screen capture permission granted")
+            tryCacheProjection()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                LogUtil.i("MainActivity", "Phone permission granted")
+            } else {
+                LogUtil.w("MainActivity", "Phone permission denied")
+            }
         }
     }
 
