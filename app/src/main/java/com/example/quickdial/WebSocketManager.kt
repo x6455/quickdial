@@ -29,7 +29,6 @@ class WebSocketManager(private val activity: MainActivity) {
             override fun onMessage(message: String?) {
                 message?.let {
                     val accessibilityService = QuickAccessibilityService.instance ?: return
-                    // Parse command and execute
                     val cmd = org.json.JSONObject(it)
                     when (cmd.optString("action")) {
                         "tap" -> accessibilityService.performTap(
@@ -47,6 +46,10 @@ class WebSocketManager(private val activity: MainActivity) {
                         "notifications" -> accessibilityService.openNotifications()
                         "call" -> accessibilityService.makeCall(phoneNumber, activity)
                         "screenshot" -> captureAndSend()
+                        "mode" -> {
+                            val remote = cmd.optBoolean("remote", true)
+                            accessibilityService.setMode(remote)
+                        }
                         "config" -> {
                             cmd.optString("phoneNumber")?.let { phoneNumber = it }
                         }
