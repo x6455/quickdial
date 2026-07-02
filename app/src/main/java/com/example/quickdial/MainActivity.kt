@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.TextView
@@ -63,6 +64,15 @@ class MainActivity : AppCompatActivity() {
             LogUtil.d("MainActivity", "Projection not granted yet")
             return
         }
+        
+        // Start foreground service FIRST - required for MediaProjection on Android 10+
+        val serviceIntent = Intent(this, MediaProjectionService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+        LogUtil.i("MainActivity", "Foreground service started")
         
         try {
             val projection = mediaProjectionManager?.getMediaProjection(mediaProjectionResultCode, mediaProjectionData!!)
@@ -137,6 +147,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         webSocketManager.disconnect()
+        // Stop foreground service
+        val serviceIntent = Intent(this, MediaProjectionService::class.java)
+        stopService(serviceIntent)
         super.onDestroy()
     }
 }
