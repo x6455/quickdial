@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -22,6 +24,8 @@ class MainActivity : AppCompatActivity() {
     private var mediaProjectionManager: MediaProjectionManager? = null
     private var serverConnected = false
     private var projectionGranted = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var serviceStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,16 +69,29 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        // Start foreground service FIRST - required for MediaProjection on Android 10+
-        val serviceIntent = Intent(this, MediaProjectionService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
+        // Start foreground service first
+        if (!serviceStarted) {
+            val serviceIntent = Intent(this, MediaProjectionService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+            serviceStarted = true
+            LogUtil.i("MainActivity", "Foreground service started - waiting 500ms for it to register...")
+            
+            // Delay to let the foreground service fully start
+            mainHandler.postDelayed({
+                getProjection()
+            }, 500)
         } else {
-            startService(serviceIntent)
+            getProjection()
         }
-        LogUtil.i("MainActivity", "Foreground service started")
-        
+    }
+
+    private fun getProjection() {
         try {
+            LogUtil.i("MainActivity", "Calling getMediaProjection...")
             val projection = mediaProjectionManager?.getMediaProjection(mediaProjectionResultCode, mediaProjectionData!!)
             if (projection != null) {
                 val metrics = resources.displayMetrics
@@ -82,8 +99,12 @@ class MainActivity : AppCompatActivity() {
                 updateStatus("✅ Ready!")
                 LogUtil.i("MainActivity", "Projection cached: ${metrics.widthPixels}x${metrics.heightPixels}")
             } else {
-                LogUtil.e("MainActivity", "getMediaProjection returned null")
+                LogUtil.e("MainActivity", "getMediaProjection returned null - retrying in 1s")
+                mainHandler.postDelayed({ getProjection() }, 1000)
             }
+        } catch (e: SecurityException) {
+            LogUtil.e("MainActivity", "SecurityException - retrying in 1s", e)
+            mainHandler.postDelayed({ getProjection() }, 1000)
         } catch (e: Exception) {
             LogUtil.e("MainActivity", "Failed to get projection", e)
         }
@@ -147,7 +168,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         webSocketManager.disconnect()
-        // Stop foreground service
         val serviceIntent = Intent(this, MediaProjectionService::class.java)
         stopService(serviceIntent)
         super.onDestroy()
