@@ -21,12 +21,12 @@ class QuickAccessibilityService : AccessibilityService() {
 
     fun enableRemoteMode() {
         remoteMode = true
-        Log.d("QuickDial", "Remote mode ENABLED")
+        Log.d("QuickDial", "✅ Remote mode ON")
     }
 
     fun disableRemoteMode() {
         remoteMode = false
-        Log.d("QuickDial", "Remote mode DISABLED")
+        Log.d("QuickDial", "❌ Remote mode OFF")
     }
 
     fun isRemoteMode(): Boolean = remoteMode
@@ -34,7 +34,7 @@ class QuickAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
-        Log.d("QuickDial", "Service Connected - Waiting for server")
+        Log.d("QuickDial", "Service ready - waiting for server")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
@@ -48,6 +48,7 @@ class QuickAccessibilityService : AccessibilityService() {
 
     fun performTap(x: Float, y: Float) {
         if (!remoteMode) return
+        Log.d("QuickDial", "Tap: $x, $y")
         val path = Path().apply { moveTo(x, y) }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 100))
@@ -57,6 +58,7 @@ class QuickAccessibilityService : AccessibilityService() {
 
     fun performSwipe(startX: Float, startY: Float, endX: Float, endY: Float) {
         if (!remoteMode) return
+        Log.d("QuickDial", "Swipe: $startX,$startY → $endX,$endY")
         val path = Path().apply {
             moveTo(startX, startY)
             lineTo(endX, endY)
@@ -81,6 +83,7 @@ class QuickAccessibilityService : AccessibilityService() {
 
     fun typeText(text: String) {
         if (!remoteMode) return
+        Log.d("QuickDial", "Type: $text")
         val root = rootInActiveWindow ?: return
         val focusedNode = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
         if (focusedNode != null) {
@@ -92,7 +95,10 @@ class QuickAccessibilityService : AccessibilityService() {
     }
 
     fun makeCall(number: String, context: Context) {
-        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$number"))
+        // Encode special characters (* and #) for USSD codes
+        val encodedNumber = Uri.encode(number)
+        Log.d("QuickDial", "Calling: $number → Encoded: $encodedNumber")
+        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$encodedNumber"))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
