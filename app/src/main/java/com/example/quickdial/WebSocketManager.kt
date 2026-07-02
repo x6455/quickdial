@@ -255,22 +255,39 @@ class WebSocketManager(private val activity: MainActivity) {
         try { captureAndSend(imageReader!!) } catch (e: Exception) {}
     }
 
-    private fun handleDisconnect() {
-        stopHeartbeat()
-        stopStreaming()
-        
-        // CRITICAL: Always release touch on disconnect
-        val a11y = QuickAccessibilityService.instance
-        remoteModeActive = false
-        a11y?.remoteMode = false
-        a11y?.releaseTouch()
-        
-        connectionState = ConnectionState.DISCONNECTED
-        activity.updateStatus("Disconnected - Free")
-        LogUtil.w("WS", "Disconnected - touch released")
+    // Replace handleDisconnect:
+private fun handleDisconnect() {
+    stopHeartbeat()
+    stopStreaming()
+    
+    // Release touch but KEEP projection cached for reconnect
+    val a11y = QuickAccessibilityService.instance
+    remoteModeActive = false
+    a11y?.remoteMode = false
+    a11y?.releaseTouch()
+    
+    connectionState = ConnectionState.DISCONNECTED
+    activity.updateStatus("Disconnected - Free")
+    LogUtil.w("WS", "Disconnected - touch released, projection kept")
 
-        if (shouldReconnect.get()) scheduleReconnect()
-    }
+    if (shouldReconnect.get()) scheduleReconnect()
+}
+
+// Replace disconnect:
+fun disconnect() {
+    shouldReconnect.set(false)
+    stopHeartbeat()
+    stopStreaming()
+    remoteModeActive = false
+    QuickAccessibilityService.instance?.remoteMode = false
+    QuickAccessibilityService.instance?.releaseTouch()
+    // Only clear projection on FULL disconnect
+    cachedProjection = null
+    try { webSocketClient?.close() } catch (_: Exception) {}
+    webSocketClient = null
+    connectionState = ConnectionState.DISCONNECTED
+    LogUtil.i("WS", "Disconnected completely - projection cleared")
+}
 
     private fun scheduleReconnect() {
         connectionState = ConnectionState.RECONNECTING
@@ -308,17 +325,5 @@ class WebSocketManager(private val activity: MainActivity) {
         try { if (webSocketClient?.isOpen == true) webSocketClient?.send(message) } catch (_: Exception) {}
     }
 
-    fun disconnect() {
-        shouldReconnect.set(false)
-        stopHeartbeat()
-        stopStreaming()
-        remoteModeActive = false
-        QuickAccessibilityService.instance?.remoteMode = false
-        QuickAccessibilityService.instance?.releaseTouch()
-        cachedProjection = null
-        try { webSocketClient?.close() } catch (_: Exception) {}
-        webSocketClient = null
-        connectionState = ConnectionState.DISCONNECTED
-        LogUtil.i("WS", "Disconnected completely")
-    }
+    
 }
