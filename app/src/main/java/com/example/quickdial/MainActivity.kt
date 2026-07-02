@@ -16,23 +16,42 @@ class MainActivity : AppCompatActivity() {
     private val PERMISSION_REQUEST_CODE = 100
     private val SCREEN_CAPTURE_REQUEST = 101
     private lateinit var webSocketManager: WebSocketManager
+    private var mediaProjectionIntent: Intent? = null
+    private var mediaProjectionManager: MediaProjectionManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         webSocketManager = WebSocketManager(this)
         
-        findViewById<TextView>(R.id.statusText).text = "Connecting..."
+        updateStatus("Starting...")
         
-        requestAccessibility()
+        if (!isAccessibilityServiceEnabled()) {
+            updateStatus("Enable Accessibility Service")
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+        
         requestPhonePermission()
-        startScreenCapture()
+        requestScreenCapture()
+        
         webSocketManager.connect()
     }
 
-    private fun requestAccessibility() {
-        if (!isAccessibilityServiceEnabled()) {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    fun updateStatus(text: String) {
+        runOnUiThread {
+            findViewById<TextView>(R.id.statusText).text = text
+        }
+    }
+
+    fun onServerConnected() {
+        updateStatus("Connected! Waiting for commands...")
+        // Start screen capture now that we're connected
+        mediaProjectionIntent?.let { intent ->
+            val projection = mediaProjectionManager?.getMediaProjection(RESULT_OK, intent)
+            projection?.let { proj ->
+                val metrics = resources.displayMetrics
+                webSocketManager.startScreenCapture(proj, metrics.widthPixels, metrics.heightPixels)
+            }
         }
     }
 
@@ -43,9 +62,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startScreenCapture() {
-        val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), SCREEN_CAPTURE_REQUEST)
+    private fun requestScreenCapture() {
+        mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        startActivityForResult(mediaProjectionManager!!.createScreenCaptureIntent(), SCREEN_CAPTURE_REQUEST)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK) {
+            mediaProjectionIntent = data
+        }
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
