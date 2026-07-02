@@ -16,41 +16,50 @@ class MainActivity : AppCompatActivity() {
     private val PERMISSION_REQUEST_CODE = 100
     private val SCREEN_CAPTURE_REQUEST = 101
     private lateinit var webSocketManager: WebSocketManager
-    private var mediaProjectionIntent: Intent? = null
+    private var mediaProjectionData: Intent? = null
     private var mediaProjectionManager: MediaProjectionManager? = null
+    private var serverReady = false
+    private var projectionReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         webSocketManager = WebSocketManager(this)
         
-        updateStatus("Starting...")
+        updateStatus("Starting QuickDial...")
         
         if (!isAccessibilityServiceEnabled()) {
-            updateStatus("Enable Accessibility Service")
+            updateStatus("⚠ Enable Accessibility Service first")
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         
         requestPhonePermission()
         requestScreenCapture()
-        
         webSocketManager.connect()
     }
 
     fun updateStatus(text: String) {
         runOnUiThread {
-            findViewById<TextView>(R.id.statusText).text = text
+            try {
+                findViewById<TextView>(R.id.statusText).text = text
+            } catch (e: Exception) {}
         }
     }
 
     fun onServerConnected() {
-        updateStatus("Connected! Waiting for commands...")
-        // Start screen capture now that we're connected
-        mediaProjectionIntent?.let { intent ->
+        serverReady = true
+        updateStatus("✅ Connected. Waiting for remote mode...")
+        tryStartCapture()
+    }
+
+    private fun tryStartCapture() {
+        if (serverReady && projectionReady) {
+            val intent = mediaProjectionData ?: return
             val projection = mediaProjectionManager?.getMediaProjection(RESULT_OK, intent)
             projection?.let { proj ->
                 val metrics = resources.displayMetrics
                 webSocketManager.startScreenCapture(proj, metrics.widthPixels, metrics.heightPixels)
+                updateStatus("✅ Ready for remote control")
             }
         }
     }
@@ -58,25 +67,37 @@ class MainActivity : AppCompatActivity() {
     private fun requestPhonePermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
             != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CALL_PHONE), PERMISSION_REQUEST_CODE)
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CALL_PHONE),
+                PERMISSION_REQUEST_CODE
+            )
         }
     }
 
     private fun requestScreenCapture() {
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        startActivityForResult(mediaProjectionManager!!.createScreenCaptureIntent(), SCREEN_CAPTURE_REQUEST)
+        startActivityForResult(
+            mediaProjectionManager!!.createScreenCaptureIntent(),
+            SCREEN_CAPTURE_REQUEST
+        )
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK) {
-            mediaProjectionIntent = data
+        if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK && data != null) {
+            mediaProjectionData = data
+            projectionReady = true
+            tryStartCapture()
         }
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
         val service = "$packageName/${QuickAccessibilityService::class.java.canonicalName}"
-        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+        val enabledServices = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
         return enabledServices.contains(service)
     }
 
