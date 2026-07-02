@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity() {
     private val SCREEN_CAPTURE_REQUEST = 101
     private lateinit var webSocketManager: WebSocketManager
     private var mediaProjectionData: Intent? = null
+    private var mediaProjectionResultCode: Int = 0
     private var mediaProjectionManager: MediaProjectionManager? = null
     private var serverConnected = false
     private var projectionGranted = false
@@ -48,23 +49,34 @@ class MainActivity : AppCompatActivity() {
 
     fun onServerConnected() {
         serverConnected = true
-        updateStatus("✅ Connected. Waiting for remote mode...")
-        LogUtil.i("MainActivity", "Server connected, attempting to cache projection...")
+        updateStatus("✅ Connected. Waiting...")
+        LogUtil.i("MainActivity", "Server connected")
         tryCacheProjection()
     }
 
     private fun tryCacheProjection() {
-        if (serverConnected && projectionGranted && mediaProjectionData != null) {
-            val projection = mediaProjectionManager?.getMediaProjection(RESULT_OK, mediaProjectionData!!)
+        if (!serverConnected) {
+            LogUtil.d("MainActivity", "Server not connected yet")
+            return
+        }
+        if (!projectionGranted || mediaProjectionData == null) {
+            LogUtil.d("MainActivity", "Projection not granted yet")
+            return
+        }
+        
+        try {
+            val projection = mediaProjectionManager?.getMediaProjection(mediaProjectionResultCode, mediaProjectionData!!)
             if (projection != null) {
                 val metrics = resources.displayMetrics
                 webSocketManager.cacheProjection(projection, metrics.widthPixels, metrics.heightPixels)
-                updateStatus("✅ Ready. Toggle remote mode from dashboard.")
+                updateStatus("✅ Ready!")
                 LogUtil.i("MainActivity", "Projection cached: ${metrics.widthPixels}x${metrics.heightPixels}")
-                return
+            } else {
+                LogUtil.e("MainActivity", "getMediaProjection returned null")
             }
+        } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to get projection", e)
         }
-        LogUtil.d("MainActivity", "Cannot cache yet - server:$serverConnected projection:$projectionGranted data:${mediaProjectionData != null}")
     }
 
     private fun requestPhonePermission() {
@@ -90,11 +102,12 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK && data != null) {
             mediaProjectionData = data
+            mediaProjectionResultCode = resultCode
             projectionGranted = true
-            LogUtil.i("MainActivity", "Screen capture permission GRANTED")
+            LogUtil.i("MainActivity", "Screen capture GRANTED (resultCode=$resultCode)")
             tryCacheProjection()
         } else {
-            LogUtil.w("MainActivity", "Screen capture permission DENIED or cancelled")
+            LogUtil.w("MainActivity", "Screen capture DENIED (resultCode=$resultCode)")
         }
     }
 
