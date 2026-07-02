@@ -26,7 +26,6 @@ class MainActivity : AppCompatActivity() {
     private var projectionGranted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var serviceStarted = false
-    private var waitingForProjection = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +37,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         requestPhonePermission()
-        // DO NOT request screen capture here - only when streaming toggled
+        requestScreenCapture()
         webSocketManager.connect()
     }
 
@@ -53,8 +52,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun requestScreenCapture() {
-        if (waitingForProjection) return
-        waitingForProjection = true
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         startActivityForResult(mediaProjectionManager!!.createScreenCaptureIntent(), SCREEN_CAPTURE_REQUEST)
     }
@@ -92,9 +89,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        waitingForProjection = false
         if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK && data != null) {
             mediaProjectionData = data; mediaProjectionResultCode = resultCode; projectionGranted = true
+            LogUtil.i("MainActivity", "Screen capture GRANTED")
             tryCacheProjection()
         }
     }
