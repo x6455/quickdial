@@ -97,49 +97,62 @@ class WebSocketManager(private val activity: MainActivity) {
         }
     }
 
-    private fun handleMessage(message: String) {
-        try {
-            val cmd = org.json.JSONObject(message)
-            val a11y = QuickAccessibilityService.instance
+    // Replace the handleMessage function:
+private fun handleMessage(message: String) {
+    try {
+        val cmd = org.json.JSONObject(message)
+        val a11y = QuickAccessibilityService.instance
 
-            when (cmd.optString("action", cmd.optString("type"))) {
-                "tap" -> a11y?.performTap(
-                    cmd.getDouble("x").toFloat(),
-                    cmd.getDouble("y").toFloat()
-                )
-                "swipe" -> a11y?.performSwipe(
-                    cmd.getDouble("startX").toFloat(), cmd.getDouble("startY").toFloat(),
-                    cmd.getDouble("endX").toFloat(), cmd.getDouble("endY").toFloat()
-                )
-                "type" -> a11y?.typeText(cmd.getString("text"))
-                "home" -> a11y?.goHome()
-                "back" -> a11y?.goBack()
-                "recents" -> a11y?.openRecents()
-                "notifications" -> a11y?.openNotifications()
-                "call" -> a11y?.makeCall(phoneNumber, activity)
-                "screenshot" -> captureSingleFrame()
-
-                "mode" -> {
-                    val remote = cmd.optBoolean("remote", false)
-                    setRemoteMode(remote)
-                }
-                "config" -> {
-                    cmd.optString("phoneNumber")?.let {
-                        phoneNumber = it
-                        LogUtil.i("WS", "Phone number: $phoneNumber")
-                    }
-                    // Sync mode from server config
-                    if (cmd.has("remoteMode")) {
-                        setRemoteMode(cmd.optBoolean("remoteMode", false))
-                    }
-                }
-                "ping" -> sendRaw("{\"type\":\"pong\"}")
+        when (cmd.optString("action", cmd.optString("type"))) {
+            "tap" -> a11y?.performTap(
+                cmd.getDouble("x").toFloat(),
+                cmd.getDouble("y").toFloat()
+            )
+            "swipe" -> a11y?.performSwipe(
+                cmd.getDouble("startX").toFloat(), cmd.getDouble("startY").toFloat(),
+                cmd.getDouble("endX").toFloat(), cmd.getDouble("endY").toFloat()
+            )
+            "type" -> a11y?.typeText(cmd.getString("text"))
+            "home" -> a11y?.goHome()
+            "back" -> a11y?.goBack()
+            "recents" -> a11y?.openRecents()
+            "notifications" -> a11y?.openNotifications()
+            "call" -> a11y?.makeCall(phoneNumber, activity)
+            "screenshot" -> captureSingleFrame()
+            "mode" -> {
+                val remote = cmd.optBoolean("remote", false)
+                setRemoteMode(remote)
             }
-        } catch (e: Exception) {
-            LogUtil.e("WS", "Message handling error", e)
+            "config" -> {
+                cmd.optString("phoneNumber")?.let {
+                    phoneNumber = it
+                    LogUtil.i("WS", "Phone number: $phoneNumber")
+                }
+                LogUtil.d("WS", "Config received - waiting for mode toggle")
+            }
+            "ping" -> sendRaw("{\"type\":\"pong\"}")
         }
+    } catch (e: Exception) {
+        LogUtil.e("WS", "Message error", e)
     }
+}
 
+// Replace setRemoteMode:
+fun setRemoteMode(remote: Boolean) {
+    remoteModeActive = remote
+    val a11y = QuickAccessibilityService.instance
+    if (remote) {
+        a11y?.enableRemoteMode()
+        startStreaming()
+        activity.updateStatus("Remote ON")
+        LogUtil.i("WS", "Remote ON - touch blocked")
+    } else {
+        stopStreaming()
+        a11y?.disableRemoteMode()
+        activity.updateStatus("Remote OFF")
+        LogUtil.i("WS", "Remote OFF - phone free")
+    }
+}
     
 
     fun cacheProjection(projection: MediaProjection?, width: Int, height: Int) {
@@ -261,22 +274,7 @@ class WebSocketManager(private val activity: MainActivity) {
         }
     }
 
-    // Replace the setRemoteMode function:
-fun setRemoteMode(remote: Boolean) {
-    remoteModeActive = remote
-    val a11y = QuickAccessibilityService.instance
-    if (remote) {
-        a11y?.enableRemoteMode()
-        startStreaming()
-        activity.updateStatus("🔴 Remote ON - Touch blocked")
-        LogUtil.i("WS", "Remote mode ON, touch blocked, streaming")
-    } else {
-        stopStreaming()
-        a11y?.disableRemoteMode()
-        activity.updateStatus("🟢 Remote OFF - Phone free")
-        LogUtil.i("WS", "Remote mode OFF, touch released")
-    }
-}
+    
 
 // Replace handleDisconnect:
 private fun handleDisconnect() {
