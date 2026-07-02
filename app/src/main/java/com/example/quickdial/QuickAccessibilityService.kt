@@ -12,6 +12,52 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
 class QuickAccessibilityService : AccessibilityService() {
+    private var isRemoteMode = true
+private var overlayView: android.view.View? = null
+private var windowManager: android.view.WindowManager? = null
+
+fun setMode(remote: Boolean) {
+    isRemoteMode = remote
+    if (remote) {
+        blockUserTouch()
+    } else {
+        releaseUserTouch()
+    }
+}
+
+private fun blockUserTouch() {
+    if (overlayView != null) return
+    windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+    overlayView = android.view.View(this).apply {
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        setOnTouchListener { _, _ -> true } // Eat all touches
+    }
+    val params = android.view.WindowManager.LayoutParams().apply {
+        type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        } else {
+            android.view.WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
+        }
+        flags = android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        format = android.graphics.PixelFormat.TRANSLUCENT
+        width = android.view.WindowManager.LayoutParams.MATCH_PARENT
+        height = android.view.WindowManager.LayoutParams.MATCH_PARENT
+    }
+    windowManager?.addView(overlayView, params)
+}
+
+private fun releaseUserTouch() {
+    overlayView?.let { windowManager?.removeView(it) }
+    overlayView = null
+}
+
+override fun onServiceConnected() {
+    super.onServiceConnected()
+    instance = this
+    blockUserTouch() // Start in remote mode by default
+    Log.d("QuickDial", "Accessibility Service Connected - Remote Mode")
+}
 
     companion object {
         var instance: QuickAccessibilityService? = null
