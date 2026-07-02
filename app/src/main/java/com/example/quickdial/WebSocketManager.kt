@@ -27,9 +27,7 @@ class WebSocketManager(private val activity: MainActivity) {
         private const val MAX_FRAME_SKIP = 3
     }
 
-    enum class ConnectionState {
-        DISCONNECTED, CONNECTING, CONNECTED, RECONNECTING
-    }
+    enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, RECONNECTING }
 
     private var webSocketClient: WebSocketClient? = null
     private var cachedProjection: MediaProjection? = null
@@ -44,11 +42,10 @@ class WebSocketManager(private val activity: MainActivity) {
     private var heartbeatRunnable: Runnable? = null
     private var streamingActive = false
     private var remoteModeActive = false
+    private var streamingEnabled = false // Separate toggle for streaming
     private var frameSkipCount = 0
 
-    init {
-        LogUtil.setSender { logJson -> sendRaw(logJson) }
-    }
+    init { LogUtil.setSender { logJson -> sendRaw(logJson) } }
 
     fun connect() {
         shouldReconnect.set(true)
@@ -60,40 +57,23 @@ class WebSocketManager(private val activity: MainActivity) {
     private fun doConnect() {
         if (connectionState == ConnectionState.CONNECTED) return
         connectionState = ConnectionState.CONNECTING
-        LogUtil.i("WS", "Connecting...")
         activity.updateStatus("Connecting...")
-
         try {
             webSocketClient = object : WebSocketClient(URI(SERVER_URL)) {
                 override fun onOpen(handshakedata: ServerHandshake?) {
                     connectionState = ConnectionState.CONNECTED
                     reconnectAttempts = 0
                     reconnectDelay = INITIAL_RECONNECT_DELAY
-                    LogUtil.i("WS", "✅ Connected")
                     activity.updateStatus("✅ Connected")
                     activity.onServerConnected()
                     startHeartbeat()
                 }
-
-                override fun onMessage(message: String?) {
-                    message?.let { handleMessage(it) }
-                }
-
-                override fun onClose(code: Int, reason: String?, remote: Boolean) {
-                    LogUtil.w("WS", "Closed: $reason")
-                    handleDisconnect()
-                }
-
-                override fun onError(ex: Exception?) {
-                    LogUtil.e("WS", "Error: ${ex?.message}", ex)
-                    handleDisconnect()
-                }
+                override fun onMessage(message: String?) { message?.let { handleMessage(it) } }
+                override fun onClose(code: Int, reason: String?, remote: Boolean) { handleDisconnect() }
+                override fun onError(ex: Exception?) { handleDisconnect() }
             }
             webSocketClient?.connect()
-        } catch (e: Exception) {
-            LogUtil.e("WS", "Connection failed", e)
-            handleDisconnect()
-        }
+        } catch (e: Exception) { handleDisconnect() }
     }
 
     private fun handleMessage(message: String) {
@@ -102,10 +82,7 @@ class WebSocketManager(private val activity: MainActivity) {
             val a11y = QuickAccessibilityService.instance
 
             when (cmd.optString("action", cmd.optString("type"))) {
-                "tap" -> a11y?.performTap(
-                    cmd.getDouble("x").toFloat(),
-                    cmd.getDouble("y").toFloat()
-                )
+                "tap" -> a11y?.performTap(cmd.getDouble("x").toFloat(), cmd.getDouble("y").toFloat())
                 "swipe" -> a11y?.performSwipe(
                     cmd.getDouble("startX").toFloat(), cmd.getDouble("startY").toFloat(),
                     cmd.getDouble("endX").toFloat(), cmd.getDouble("endY").toFloat()
@@ -116,188 +93,121 @@ class WebSocketManager(private val activity: MainActivity) {
                 "recents" -> a11y?.openRecents()
                 "notifications" -> a11y?.openNotifications()
                 "call" -> a11y?.makeCall(phoneNumber, activity)
-                "screenshot" -> captureSingleFrame()
-                "mode" -> {
-                    val remote = cmd.optBoolean("remote", false)
-                    setRemoteMode(remote)
+                "dumpUI" -> {
+                    val uiJson = a11y?.dumpUI() ?: "{}"
+                    sendRaw("{\"type\":\"uiTree\",\"data\":$uiJson}")
                 }
-                "config" -> {
-                    cmd.optString("phoneNumber")?.let {
-                        phoneNumber = it
-                        LogUtil.i("WS", "Phone: $phoneNumber")
+                "tapByText" -> {
+                    val result = a11y?.tapByText(cmd.getString("text")) ?: false
+                    sendRaw("{\"type\":\"actionResult\",\"action\":\"tapByText\",\"success\":$result}")
+                }
+                "tapById" -> {
+                    val result = a11y?.tapById(cmd.getString("id")) ?: false
+                    sendRaw("{\"type\":\"actionResult\",\"action\":\"tapById\",\"success\":$result}")
+                }
+                "typeIntoFocused" -> {
+                    val result = a11y?.typeIntoFocused(cmd.getString("text")) ?: false
+                    sendRaw("{\"type\":\"actionResult\",\"action\":\"typeIntoFocused\",\"success\":$result}")
+                }
+                "screenshot" -> captureSingleFrame()
+                "mode" -> setRemoteMode(cmd.optBoolean("remote", false))
+                "streaming" -> {
+                    streamingEnabled = cmd.optBoolean("enabled", false)
+                    if (streamingEnabled) {
+                        activity.requestScreenCapture()
+                    } else {
+                        stopStreaming()
                     }
                 }
+                "config" -> cmd.optString("phoneNumber")?.let { phoneNumber = it }
                 "ping" -> sendRaw("{\"type\":\"pong\"}")
             }
-        } catch (e: Exception) {
-            LogUtil.e("WS", "Message error", e)
-        }
+        } catch (e: Exception) {}
     }
 
     fun setRemoteMode(remote: Boolean) {
-        if (remoteModeActive == remote) return // No change
-        
+        if (remoteModeActive == remote) return
         remoteModeActive = remote
         val a11y = QuickAccessibilityService.instance
-        
         if (remote) {
-            // ORDER MATTERS: block touch first, then set mode, then stream
             a11y?.blockTouch()
             a11y?.remoteMode = true
-            startStreaming()
-            activity.updateStatus("🔴 Remote ON - Locked")
-            LogUtil.i("WS", "🔒 Remote ON - touch blocked, streaming")
+            if (streamingEnabled) startStreaming()
+            activity.updateStatus("🔴 Remote ON")
         } else {
-            // ORDER MATTERS: stop stream, release mode, release touch
             stopStreaming()
             a11y?.remoteMode = false
             a11y?.releaseTouch()
-            activity.updateStatus("🟢 Remote OFF - Free")
-            LogUtil.i("WS", "🔓 Remote OFF - touch released")
+            activity.updateStatus("🟢 Remote OFF")
         }
     }
 
     fun cacheProjection(projection: MediaProjection?, width: Int, height: Int) {
         stopStreaming()
         cachedProjection = projection
-        if (cachedProjection != null) {
-            LogUtil.i("WS", "Projection cached: ${width}x${height}")
+        if (cachedProjection != null && streamingEnabled && remoteModeActive) {
+            startStreaming()
         }
     }
 
     private fun startStreaming() {
-        if (streamingActive) return
-        if (cachedProjection == null) {
-            LogUtil.w("WS", "No projection cached")
-            return
-        }
-        if (!isConnected()) {
-            LogUtil.w("WS", "Not connected")
-            return
-        }
-
+        if (streamingActive || cachedProjection == null || !isConnected()) return
         try {
             val projection = cachedProjection!!
             val metrics = activity.resources.displayMetrics
-            val width = metrics.widthPixels
-            val height = metrics.heightPixels
-
-            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-            virtualDisplay = projection.createVirtualDisplay(
-                "ScreenCapture", width, height, metrics.densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader!!.surface, null, null
-            )
-
+            val w = metrics.widthPixels
+            val h = metrics.heightPixels
+            imageReader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
+            virtualDisplay = projection.createVirtualDisplay("ScreenCapture", w, h, metrics.densityDpi,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader!!.surface, null, null)
             imageReader!!.setOnImageAvailableListener({ reader ->
-                if (!streamingActive || !isConnected()) {
-                    try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}
-                    return@setOnImageAvailableListener
-                }
-                if (frameSkipCount < MAX_FRAME_SKIP) {
-                    frameSkipCount++
-                    try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}
-                    return@setOnImageAvailableListener
-                }
+                if (!streamingActive || !isConnected()) { try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
+                if (frameSkipCount < MAX_FRAME_SKIP) { frameSkipCount++; try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
                 frameSkipCount = 0
                 captureAndSend(reader)
             }, mainHandler)
-
             streamingActive = true
-            LogUtil.i("WS", "Streaming: ${width}x${height}")
-        } catch (e: Exception) {
-            LogUtil.e("WS", "Stream start failed", e)
-            stopStreaming()
-        }
+        } catch (e: Exception) { stopStreaming() }
     }
 
     private fun stopStreaming() {
         streamingActive = false
         try { virtualDisplay?.release() } catch (_: Exception) {}
         try { imageReader?.close() } catch (_: Exception) {}
-        virtualDisplay = null
-        imageReader = null
-        LogUtil.i("WS", "Streaming stopped")
+        virtualDisplay = null; imageReader = null
     }
 
     private fun captureAndSend(reader: ImageReader) {
         try {
             val image = reader.acquireLatestImage() ?: return
-            val width = image.width
-            val height = image.height
-            val planes = image.planes
-            val buffer = planes[0].buffer
-            val pixelStride = planes[0].pixelStride
-            val rowStride = planes[0].rowStride
-            val rowPadding = rowStride - pixelStride * width
-
-            val bitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
-            bitmap.copyPixelsFromBuffer(buffer)
-            image.close()
-
-            val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
-            bitmap.recycle()
-
+            val w = image.width; val h = image.height
+            val buffer = image.planes[0].buffer
+            val ps = image.planes[0].pixelStride; val rs = image.planes[0].rowStride
+            val bitmap = Bitmap.createBitmap(w + (rs - ps * w) / ps, h, Bitmap.Config.ARGB_8888)
+            bitmap.copyPixelsFromBuffer(buffer); image.close()
+            val cropped = Bitmap.createBitmap(bitmap, 0, 0, w, h); bitmap.recycle()
             val baos = ByteArrayOutputStream()
-            croppedBitmap.compress(Bitmap.CompressFormat.JPEG, FRAME_QUALITY, baos)
-            croppedBitmap.recycle()
-
-            val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+            cropped.compress(Bitmap.CompressFormat.JPEG, FRAME_QUALITY, baos); cropped.recycle()
+            sendRaw("{\"type\":\"frame\",\"data\":\"${Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)}\"}")
             baos.close()
-            sendRaw("{\"type\":\"frame\",\"data\":\"$base64\"}")
-        } catch (e: Exception) {
-            LogUtil.e("WS", "Frame error", e)
-        }
+        } catch (_: Exception) {}
     }
 
-    private fun captureSingleFrame() {
-        if (!streamingActive || imageReader == null) return
-        try { captureAndSend(imageReader!!) } catch (e: Exception) {}
+    private fun captureSingleFrame() { if (streamingActive && imageReader != null) try { captureAndSend(imageReader!!) } catch (_: Exception) {} }
+
+    private fun handleDisconnect() {
+        stopHeartbeat(); stopStreaming()
+        QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
+        remoteModeActive = false
+        connectionState = ConnectionState.DISCONNECTED
+        activity.updateStatus("Disconnected")
+        if (shouldReconnect.get()) scheduleReconnect()
     }
-
-    // Replace handleDisconnect:
-private fun handleDisconnect() {
-    stopHeartbeat()
-    stopStreaming()
-    
-    // Release touch but KEEP projection cached for reconnect
-    val a11y = QuickAccessibilityService.instance
-    remoteModeActive = false
-    a11y?.remoteMode = false
-    a11y?.releaseTouch()
-    
-    connectionState = ConnectionState.DISCONNECTED
-    activity.updateStatus("Disconnected - Free")
-    LogUtil.w("WS", "Disconnected - touch released, projection kept")
-
-    if (shouldReconnect.get()) scheduleReconnect()
-}
-
-// Replace disconnect:
-fun disconnect() {
-    shouldReconnect.set(false)
-    stopHeartbeat()
-    stopStreaming()
-    remoteModeActive = false
-    QuickAccessibilityService.instance?.remoteMode = false
-    QuickAccessibilityService.instance?.releaseTouch()
-    // Only clear projection on FULL disconnect
-    cachedProjection = null
-    try { webSocketClient?.close() } catch (_: Exception) {}
-    webSocketClient = null
-    connectionState = ConnectionState.DISCONNECTED
-    LogUtil.i("WS", "Disconnected completely - projection cleared")
-}
 
     private fun scheduleReconnect() {
-        connectionState = ConnectionState.RECONNECTING
-        reconnectAttempts++
+        connectionState = ConnectionState.RECONNECTING; reconnectAttempts++
         val delay = min(reconnectDelay, MAX_RECONNECT_DELAY)
-        LogUtil.w("WS", "Reconnect in ${delay/1000}s (#$reconnectAttempts)")
-        activity.updateStatus("Reconnecting in ${delay/1000}s...")
-        mainHandler.postDelayed({
-            if (shouldReconnect.get() && connectionState != ConnectionState.CONNECTED) doConnect()
-        }, delay)
+        mainHandler.postDelayed({ if (shouldReconnect.get() && connectionState != ConnectionState.CONNECTED) doConnect() }, delay)
         reconnectDelay = min(reconnectDelay * 2, MAX_RECONNECT_DELAY)
     }
 
@@ -305,25 +215,21 @@ fun disconnect() {
         stopHeartbeat()
         heartbeatRunnable = object : Runnable {
             override fun run() {
-                if (connectionState == ConnectionState.CONNECTED) {
-                    sendRaw("{\"type\":\"ping\"}")
-                    mainHandler.postDelayed(this, HEARTBEAT_INTERVAL)
-                }
+                if (connectionState == ConnectionState.CONNECTED) { sendRaw("{\"type\":\"ping\"}"); mainHandler.postDelayed(this, HEARTBEAT_INTERVAL) }
             }
         }
         mainHandler.postDelayed(heartbeatRunnable!!, HEARTBEAT_INTERVAL)
     }
 
-    private fun stopHeartbeat() {
-        heartbeatRunnable?.let { mainHandler.removeCallbacks(it) }
-        heartbeatRunnable = null
-    }
-
+    private fun stopHeartbeat() { heartbeatRunnable?.let { mainHandler.removeCallbacks(it) }; heartbeatRunnable = null }
     fun isConnected(): Boolean = connectionState == ConnectionState.CONNECTED
+    private fun sendRaw(message: String) { try { if (webSocketClient?.isOpen == true) webSocketClient?.send(message) } catch (_: Exception) {} }
 
-    private fun sendRaw(message: String) {
-        try { if (webSocketClient?.isOpen == true) webSocketClient?.send(message) } catch (_: Exception) {}
+    fun disconnect() {
+        shouldReconnect.set(false); stopHeartbeat(); stopStreaming()
+        QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
+        cachedProjection = null
+        try { webSocketClient?.close() } catch (_: Exception) {}
+        connectionState = ConnectionState.DISCONNECTED
     }
-
-    
 }
