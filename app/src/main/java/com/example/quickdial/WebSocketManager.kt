@@ -141,52 +141,64 @@ class WebSocketManager(private val activity: MainActivity) {
     }
 
     fun takeScreenshot() {
-        if (cachedProjection == null) {
-            LogUtil.w("WS", "No projection for screenshot")
-            sendRaw("{\"type\":\"error\",\"message\":\"Screen capture not ready\"}")
-            return
-        }
-        try {
-            val metrics = activity.resources.displayMetrics
-            val w = (metrics.widthPixels * SCALE).toInt()
-            val h = (metrics.heightPixels * SCALE).toInt()
-            
-            val imageReader = ImageReader.newInstance(w, h, PixelFormat.RGB_565, 2)
-            val vd = cachedProjection!!.createVirtualDisplay(
-                "Screenshot", w, h, metrics.densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader.surface, null, null
-            )
-
-            mainHandler.postDelayed({
-                try {
-                    val image = imageReader.acquireLatestImage()
-                    if (image != null) {
-                        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
-                        bitmap.copyPixelsFromBuffer(image.planes[0].buffer)
-                        image.close()
-                        
-                        val baos = ByteArrayOutputStream()
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
-                        bitmap.recycle()
-                        
-                        val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-                        baos.close()
-                        
-                        sendRaw("{\"type\":\"screenshot\",\"data\":\"$base64\"}")
-                        LogUtil.i("WS", "Screenshot taken")
-                    }
-                } catch (e: Exception) {
-                    LogUtil.e("WS", "Screenshot failed", e)
-                }
-                vd.release()
-                imageReader.close()
-            }, 500)
-            
-        } catch (e: Exception) {
-            LogUtil.e("WS", "Screenshot error", e)
-        }
+    if (cachedProjection == null) {
+        LogUtil.w("WS", "No projection for screenshot")
+        sendRaw("{\"type\":\"error\",\"message\":\"Screen capture not ready\"}")
+        return
     }
+    try {
+        val metrics = activity.resources.displayMetrics
+        val w = (metrics.widthPixels * SCALE).toInt()
+        val h = (metrics.heightPixels * SCALE).toInt()
+        
+        // Use RGBA_8888 to match display format
+        val imageReader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
+        val vd = cachedProjection!!.createVirtualDisplay(
+            "Screenshot", w, h, metrics.densityDpi,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+            imageReader.surface, null, null
+        )
+
+        mainHandler.postDelayed({
+            try {
+                val image = imageReader.acquireLatestImage()
+                if (image != null) {
+                    val planes = image.planes
+                    val buffer = planes[0].buffer
+                    val width = image.width
+                    val height = image.height
+                    val pixelStride = planes[0].pixelStride
+                    val rowStride = planes[0].rowStride
+                    val rowPadding = rowStride - pixelStride * width
+                    
+                    val bitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
+                    bitmap.copyPixelsFromBuffer(buffer)
+                    image.close()
+                    
+                    val cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                    bitmap.recycle()
+                    
+                    val baos = ByteArrayOutputStream()
+                    cropped.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                    cropped.recycle()
+                    
+                    val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                    baos.close()
+                    
+                    sendRaw("{\"type\":\"screenshot\",\"data\":\"$base64\"}")
+                    LogUtil.i("WS", "Screenshot taken ${width}x${height}")
+                }
+            } catch (e: Exception) {
+                LogUtil.e("WS", "Screenshot failed", e)
+            }
+            vd.release()
+            imageReader.close()
+        }, 500)
+        
+    } catch (e: Exception) {
+        LogUtil.e("WS", "Screenshot error", e)
+    }
+}
 
     private fun handleDisconnect() {
         stopHeartbeat()
