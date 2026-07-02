@@ -140,20 +140,7 @@ class WebSocketManager(private val activity: MainActivity) {
         }
     }
 
-    fun setRemoteMode(remote: Boolean) {
-        remoteModeActive = remote
-        if (remote) {
-            QuickAccessibilityService.instance?.enableRemoteMode()
-            startStreaming()
-            activity.updateStatus("🔴 Remote ON - Streaming")
-            LogUtil.i("WS", "Remote mode ON, streaming started")
-        } else {
-            stopStreaming()
-            QuickAccessibilityService.instance?.disableRemoteMode()
-            activity.updateStatus("🟢 Remote OFF - Phone free")
-            LogUtil.i("WS", "Remote mode OFF, streaming stopped")
-        }
-    }
+    
 
     fun cacheProjection(projection: MediaProjection?, width: Int, height: Int) {
         stopStreaming()
@@ -274,18 +261,36 @@ class WebSocketManager(private val activity: MainActivity) {
         }
     }
 
-    private fun handleDisconnect() {
-        stopHeartbeat()
+    // Replace the setRemoteMode function:
+fun setRemoteMode(remote: Boolean) {
+    remoteModeActive = remote
+    val a11y = QuickAccessibilityService.instance
+    if (remote) {
+        a11y?.enableRemoteMode()
+        startStreaming()
+        activity.updateStatus("🔴 Remote ON - Touch blocked")
+        LogUtil.i("WS", "Remote mode ON, touch blocked, streaming")
+    } else {
         stopStreaming()
-        remoteModeActive = false
-        QuickAccessibilityService.instance?.disableRemoteMode()
-        connectionState = ConnectionState.DISCONNECTED
-        activity.updateStatus("Disconnected")
-
-        if (shouldReconnect.get()) {
-            scheduleReconnect()
-        }
+        a11y?.disableRemoteMode()
+        activity.updateStatus("🟢 Remote OFF - Phone free")
+        LogUtil.i("WS", "Remote mode OFF, touch released")
     }
+}
+
+// Replace handleDisconnect:
+private fun handleDisconnect() {
+    stopHeartbeat()
+    stopStreaming()
+    remoteModeActive = false
+    QuickAccessibilityService.instance?.disableRemoteMode() // Release touch on disconnect
+    connectionState = ConnectionState.DISCONNECTED
+    activity.updateStatus("Disconnected - Phone free")
+    
+    if (shouldReconnect.get()) {
+        scheduleReconnect()
+    }
+}
 
     private fun scheduleReconnect() {
         connectionState = ConnectionState.RECONNECTING
