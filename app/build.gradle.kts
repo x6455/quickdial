@@ -7,6 +7,16 @@ android {
     namespace = "com.example.quickdial"
     compileSdk = 34
     
+    signingConfigs {
+        create("release") {
+            // For unsigned/self-signed APK that can be installed
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+    
     defaultConfig {
         applicationId = "com.example.quickdial"
         minSdk = 21
@@ -17,9 +27,12 @@ android {
     
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     
