@@ -151,24 +151,26 @@ class WebSocketManager(private val activity: MainActivity) {
     }
 
     private fun startStreaming() {
-        if (streamingActive || cachedProjection == null || !isConnected()) return
-        try {
-            val projection = cachedProjection!!
-            val metrics = activity.resources.displayMetrics
-            val w = metrics.widthPixels
-            val h = metrics.heightPixels
-            imageReader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
-            virtualDisplay = projection.createVirtualDisplay("ScreenCapture", w, h, metrics.densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader!!.surface, null, null)
-            imageReader!!.setOnImageAvailableListener({ reader ->
-                if (!streamingActive || !isConnected()) { try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
-                if (frameSkipCount < MAX_FRAME_SKIP) { frameSkipCount++; try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
-                frameSkipCount = 0
-                captureAndSend(reader)
-            }, mainHandler)
-            streamingActive = true
-        } catch (e: Exception) { stopStreaming() }
-    }
+    if (streamingActive || cachedProjection == null || !isConnected()) return
+    try {
+        val projection = cachedProjection!!
+        val metrics = activity.resources.displayMetrics
+        val scale = 0.5f  // 50% scale for faster streaming
+        val w = (metrics.widthPixels * scale).toInt()
+        val h = (metrics.heightPixels * scale).toInt()
+        imageReader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
+        virtualDisplay = projection.createVirtualDisplay("ScreenCapture", w, h, metrics.densityDpi,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader!!.surface, null, null)
+        imageReader!!.setOnImageAvailableListener({ reader ->
+            if (!streamingActive || !isConnected()) { try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
+            if (frameSkipCount < MAX_FRAME_SKIP) { frameSkipCount++; try { reader.acquireLatestImage()?.close() } catch (_: Exception) {}; return@setOnImageAvailableListener }
+            frameSkipCount = 0
+            captureAndSend(reader)
+        }, mainHandler)
+        streamingActive = true
+        LogUtil.i("WS", "Streaming: ${w}x${h}")
+    } catch (e: Exception) { stopStreaming() }
+}
 
     private fun stopStreaming() {
         streamingActive = false
