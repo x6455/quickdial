@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.graphics.Path
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -13,6 +14,8 @@ import android.os.Looper
 import android.view.Gravity
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import org.json.JSONArray
+import org.json.JSONObject
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -28,33 +31,15 @@ class QuickAccessibilityService : AccessibilityService() {
     var remoteMode = false
 
     fun blockTouch() {
-        LogUtil.i("A11yService", "blockTouch() CALLED - touchBlocked=$touchBlocked remoteMode=$remoteMode instance=${instance != null}")
-        
-        if (touchBlocked) {
-            LogUtil.w("A11yService", "blockTouch: Already blocked, skipping")
-            return
-        }
-        
-        if (instance == null) {
-            LogUtil.e("A11yService", "blockTouch: instance is NULL, cannot proceed")
-            return
-        }
-        
+        LogUtil.i("A11yService", "blockTouch() CALLED - touchBlocked=$touchBlocked")
+        if (touchBlocked) { LogUtil.d("A11yService", "Already blocked"); return }
         mainHandler.post {
-            LogUtil.i("A11yService", "blockTouch: Running on main thread (thread=${Thread.currentThread().name})")
             try {
                 windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-                LogUtil.i("A11yService", "blockTouch: WindowManager obtained")
-                
                 overlayView = android.view.View(this).apply {
                     setBackgroundColor(android.graphics.Color.argb(1, 0, 0, 0))
-                    setOnTouchListener { _, _ -> 
-                        LogUtil.d("A11yService", "Touch EATEN by overlay")
-                        true 
-                    }
+                    setOnTouchListener { _, _ -> true }
                 }
-                LogUtil.i("A11yService", "blockTouch: Overlay view created")
-                
                 val params = android.view.WindowManager.LayoutParams().apply {
                     type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
@@ -72,89 +57,143 @@ class QuickAccessibilityService : AccessibilityService() {
                     x = 0
                     y = 80
                 }
-                LogUtil.i("A11yService", "blockTouch: LayoutParams created, calling addView...")
-                
                 windowManager?.addView(overlayView, params)
                 touchBlocked = true
-                LogUtil.i("A11yService", "✅✅✅ Touch BLOCKED successfully! touchBlocked=$touchBlocked")
-                
+                LogUtil.i("A11yService", "✅ Touch BLOCKED")
             } catch (e: Exception) {
-                LogUtil.e("A11yService", "❌ blockTouch FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+                LogUtil.e("A11yService", "Block failed", e)
                 touchBlocked = false
             }
         }
-        LogUtil.i("A11yService", "blockTouch: Posted to main handler")
     }
 
     fun releaseTouch() {
-        LogUtil.i("A11yService", "releaseTouch() CALLED - touchBlocked=$touchBlocked")
-        
-        if (!touchBlocked) {
-            LogUtil.d("A11yService", "releaseTouch: Not blocked, skipping")
-            return
-        }
-        
+        if (!touchBlocked) { LogUtil.d("A11yService", "Not blocked"); return }
         mainHandler.post {
-            LogUtil.i("A11yService", "releaseTouch: Running on main thread")
-            try {
-                overlayView?.let { 
-                    windowManager?.removeView(it)
-                    LogUtil.i("A11yService", "releaseTouch: View removed from WindowManager")
-                } ?: LogUtil.w("A11yService", "releaseTouch: overlayView was null")
-            } catch (e: Exception) {
-                LogUtil.e("A11yService", "releaseTouch FAILED", e)
-            }
+            try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}
             overlayView = null
             windowManager = null
             touchBlocked = false
-            LogUtil.i("A11yService", "✅ Touch RELEASED - touchBlocked=$touchBlocked")
+            LogUtil.i("A11yService", "✅ Touch RELEASED")
         }
     }
 
     fun isTouchBlocked(): Boolean = touchBlocked
 
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-        instance = this
-        touchBlocked = false
-        remoteMode = false
-        overlayView = null
-        windowManager = null
-        LogUtil.i("A11yService", "Service ready - waiting for server control")
+    // ---------- UI TREE DUMP ----------
+    
+    fun dumpUI(): String {
+        val root = rootInActiveWindow ?: return "{\"error\":\"No active window\"}"
+        val json = JSONObject()
+        json.put("packageName", root.packageName?.toString() ?: "unknown")
+        json.put("elements", serializeNode(root))
+        root.recycle()
+        return json.toString()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            LogUtil.d("A11yService", "Window: ${event.packageName}")
+    private fun serializeNode(node: AccessibilityNodeInfo): JSONArray {
+        val arr = JSONArray()
+        try {
+            val elements = mutableListOf<AccessibilityNodeInfo>()
+            collectNodes(node, elements)
+            for (el in elements) {
+                if (el.text?.isNotEmpty() == true || el.contentDescription?.isNotEmpty() == true || el.isClickable) {
+                    val obj = JSONObject()
+                    obj.put("text", el.text?.toString() ?: "")
+                    obj.put("contentDesc", el.contentDescription?.toString() ?: "")
+                    obj.put("viewId", el.viewIdResourceName ?: "")
+                    obj.put("className", el.className?.toString() ?: "")
+                    obj.put("clickable", el.isClickable)
+                    obj.put("longClickable", el.isLongClickable)
+                    obj.put("checkable", el.isCheckable)
+                    obj.put("checked", el.isChecked)
+                    obj.put("focusable", el.isFocusable)
+                    obj.put("focused", el.isFocused)
+                    obj.put("editable", el.isEditable)
+                    obj.put("enabled", el.isEnabled)
+                    
+                    val rect = Rect()
+                    el.getBoundsInScreen(rect)
+                    obj.put("bounds", "${rect.left},${rect.top},${rect.right},${rect.bottom}")
+                    
+                    arr.put(obj)
+                }
+            }
+        } catch (e: Exception) {
+            LogUtil.e("A11yService", "Serialize error", e)
+        }
+        return arr
+    }
+
+    private fun collectNodes(node: AccessibilityNodeInfo, list: MutableList<AccessibilityNodeInfo>) {
+        list.add(node)
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            collectNodes(child, list)
         }
     }
 
-    override fun onInterrupt() {
-        LogUtil.w("A11yService", "Interrupted - force releasing")
-        remoteMode = false
-        mainHandler.post { 
-            try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}
-            overlayView = null
-            windowManager = null
-            touchBlocked = false
+    // ---------- ACTIONS ----------
+
+    fun tapByText(text: String): Boolean {
+        if (!remoteMode) return false
+        val root = rootInActiveWindow ?: return false
+        val nodes = root.findAccessibilityNodeInfosByText(text)
+        for (node in nodes) {
+            if (node.isClickable && node.isEnabled) {
+                val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                LogUtil.i("A11yService", "tapByText '$text' → $result")
+                node.recycle()
+                root.recycle()
+                return result
+            }
+            node.recycle()
         }
+        root.recycle()
+        LogUtil.w("A11yService", "tapByText '$text' not found")
+        return false
     }
 
-    override fun onDestroy() {
-        LogUtil.i("A11yService", "onDestroy - releasing touch")
-        remoteMode = false
-        mainHandler.post {
-            try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}
-            overlayView = null
-            windowManager = null
-            touchBlocked = false
+    fun tapById(viewId: String): Boolean {
+        if (!remoteMode) return false
+        val root = rootInActiveWindow ?: return false
+        val nodes = root.findAccessibilityNodeInfosByViewId(viewId)
+        for (node in nodes) {
+            if (node.isClickable && node.isEnabled) {
+                val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                LogUtil.i("A11yService", "tapById '$viewId' → $result")
+                node.recycle()
+                root.recycle()
+                return result
+            }
+            node.recycle()
         }
-        instance = null
-        super.onDestroy()
+        root.recycle()
+        LogUtil.w("A11yService", "tapById '$viewId' not found")
+        return false
+    }
+
+    fun typeIntoFocused(text: String): Boolean {
+        if (!remoteMode) return false
+        val root = rootInActiveWindow ?: return false
+        val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+        if (focused != null && focused.isEditable) {
+            val args = android.os.Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+            }
+            val result = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+            LogUtil.i("A11yService", "typeIntoFocused '$text' → $result")
+            focused.recycle()
+            root.recycle()
+            return result
+        }
+        root.recycle()
+        LogUtil.w("A11yService", "No focused editable field")
+        return false
     }
 
     fun performTap(x: Float, y: Float) {
-        if (!remoteMode) { LogUtil.w("A11yService", "Tap denied: remote OFF"); return }
+        if (!remoteMode) return
         try {
             val path = Path().apply { moveTo(x, y) }
             val gesture = GestureDescription.Builder()
@@ -168,29 +207,21 @@ class QuickAccessibilityService : AccessibilityService() {
     }
 
     fun performSwipe(startX: Float, startY: Float, endX: Float, endY: Float) {
-        if (!remoteMode) { LogUtil.w("A11yService", "Swipe denied: remote OFF"); return }
+        if (!remoteMode) return
         try {
             val path = Path().apply { moveTo(startX, startY); lineTo(endX, endY) }
             val gesture = GestureDescription.Builder()
                 .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
                 .build()
             dispatchGesture(gesture, null, null)
-            LogUtil.d("A11yService", "Swipe: $startX,$startY→$endX,$endY")
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Swipe failed", e)
-        }
+        } catch (e: Exception) {}
     }
 
     fun openNotifications() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                performSwipe(540f, 0f, 540f, 800f)
-            } else {
-                performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
-            }
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Notify failed", e)
-        }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) performSwipe(540f, 0f, 540f, 800f)
+            else performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+        } catch (_: Exception) {}
     }
 
     fun goHome() { try { performGlobalAction(GLOBAL_ACTION_HOME) } catch (_: Exception) {} }
@@ -198,20 +229,8 @@ class QuickAccessibilityService : AccessibilityService() {
     fun openRecents() { try { performGlobalAction(GLOBAL_ACTION_RECENTS) } catch (_: Exception) {} }
 
     fun typeText(text: String) {
-        if (!remoteMode) { LogUtil.w("A11yService", "Type denied: remote OFF"); return }
-        try {
-            val root = rootInActiveWindow ?: return
-            val focusedNode = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            if (focusedNode != null) {
-                val args = android.os.Bundle().apply {
-                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
-                }
-                focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-                LogUtil.d("A11yService", "Typed: $text")
-            }
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Type failed", e)
-        }
+        if (!remoteMode) return
+        typeIntoFocused(text)
     }
 
     fun makeCall(number: String, context: Context) {
@@ -220,9 +239,30 @@ class QuickAccessibilityService : AccessibilityService() {
             val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$encodedNumber"))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-            LogUtil.i("A11yService", "Calling: $number")
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Call failed", e)
-        }
+        } catch (_: Exception) {}
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        instance = this
+        touchBlocked = false
+        remoteMode = false
+        overlayView = null
+        windowManager = null
+        LogUtil.i("A11yService", "Service ready")
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+
+    override fun onInterrupt() {
+        remoteMode = false
+        mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
+    }
+
+    override fun onDestroy() {
+        remoteMode = false
+        mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
+        instance = null
+        super.onDestroy()
     }
 }
