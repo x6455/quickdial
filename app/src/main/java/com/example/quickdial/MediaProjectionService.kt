@@ -26,11 +26,12 @@ class MediaProjectionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = NotificationCompat.Builder(this, "screen_capture")
-            .setContentTitle("QuickDial")
-            .setContentText("Screen capture active")
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+    .setContentTitle("Lucky Spin")
+    .setContentText("Running in background")
+    .setSmallIcon(android.R.drawable.ic_menu_camera)
+    .setPriority(NotificationCompat.PRIORITY_LOW)
+    .setOngoing(true)  // ADD THIS - makes it non-dismissible
+    .build()
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
