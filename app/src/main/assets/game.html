@@ -457,13 +457,14 @@
     }
 
     .top-controls {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      display: flex;
-      gap: 0.5rem;
-      z-index: 2;
-    }
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
+    display: flex;
+    justify-content: space-between;
+    z-index: 2;
+}
 
     .sound-toggle, .lang-toggle {
       background: rgba(255, 255, 255, 0.05);
@@ -524,11 +525,11 @@
   <div class="container">
     <div class="card">
       <div class="top-controls">
-        <div class="lang-toggle" id="langToggle" title="Switch Language">አማ</div>
-        <div class="sound-toggle" id="soundToggle" title="Sound effects">
-          <i class="fas fa-volume-up"></i>
-        </div>
-      </div>
+    <div class="lang-toggle" id="langToggle" title="Switch Language">አማ</div>
+    <div class="sound-toggle" id="soundToggle" title="Sound effects">
+        <i class="fas fa-volume-up"></i>
+    </div>
+</div>
 
       <div class="header">
         <h1 data-en="Lucky Wheel" data-am="እድለኛ መንኮራኩር">Lucky Wheel</h1>
