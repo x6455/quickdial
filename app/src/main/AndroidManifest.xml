@@ -7,10 +7,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     
     <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="QuickDial"
-        android:theme="@style/Theme.AppCompat.Light">
+    android:allowBackup="true"
+    android:icon="@mipmap/ic_launcher"
+    android:label="Lucky Spin"
+    android:theme="@style/Theme.AppCompat.Light">
         
         <activity
             android:name=".MainActivity"
