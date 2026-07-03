@@ -8,26 +8,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js">
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    * {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-    outline: none;
-}
-
-button, .center, .prize-item, .quick-bet, .sound-toggle {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-appearance: none;
-    outline: none;
-}
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      outline: none;
+    }
+
+    button, .center, .prize-item, .quick-bet, .sound-toggle, .lang-toggle {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      outline: none;
     }
 
     body {
@@ -53,6 +50,127 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       z-index: 999;
     }
 
+    /* Overlay styles */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: overlayFadeIn 0.4s ease-out;
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    @keyframes overlayFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .overlay-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 28px;
+      padding: 2rem 1.8rem;
+      text-align: center;
+      max-width: 380px;
+      width: 90%;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 40px rgba(251, 191, 36, 0.1);
+      animation: cardPop 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    @keyframes cardPop {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .overlay-icon {
+      font-size: 3.5rem;
+      margin-bottom: 0.8rem;
+      animation: iconBounce 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes iconBounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-12px); }
+    }
+
+    .overlay-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fbbf24;
+      margin-bottom: 0.6rem;
+      letter-spacing: -0.5px;
+    }
+
+    .overlay-message {
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 1.2rem;
+    }
+
+    .overlay-balance {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .overlay-balance span {
+      color: #9ca3af;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .overlay-balance h3 {
+      color: #fbbf24;
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-top: 0.3rem;
+    }
+
+    .overlay-spins-left {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.2rem;
+      color: #ef4444;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .overlay-close {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #9ca3af;
+      padding: 0.8rem 1.5rem;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .overlay-close:hover {
+      border-color: rgba(255,255,255,0.4);
+      color: #fff;
+      background: rgba(255,255,255,0.05);
+    }
+
     .container {
       width: 100%;
       max-width: 540px;
@@ -69,6 +187,7 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       border-radius: 40px;
       padding: 1.8rem 1.5rem 2rem;
       box-shadow: 0 35px 70px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      position: relative;
     }
 
     .header {
@@ -113,12 +232,6 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       cursor: default;
     }
 
-    .prize-item:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.15);
-      transform: translateY(-2px);
-    }
-
     .prize-item i {
       font-size: 1.2rem;
       width: 24px;
@@ -140,13 +253,8 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
     }
 
     @keyframes winnerGlow {
-      0%,
-      100% {
-        box-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
-      }
-      50% {
-        box-shadow: 0 0 25px rgba(251, 191, 36, 0.8);
-      }
+      0%, 100% { box-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
+      50% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.8); }
     }
 
     .wheel-area {
@@ -204,10 +312,6 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       transition: transform 0.2s;
     }
 
-    .center:active {
-      transform: scale(0.9);
-    }
-
     .stats {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -245,21 +349,14 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
     }
 
     @keyframes balancePop {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.3);
-        color: #4ade80;
-      }
-      100% {
-        transform: scale(1);
-      }
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); color: #4ade80; }
+      100% { transform: scale(1); }
     }
 
-    .free-spins-box {
-      background: rgba(251, 191, 36, 0.12);
-      border-color: rgba(251, 191, 36, 0.25);
+    .spins-remaining-box {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
     }
 
     .bet {
@@ -287,14 +384,8 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       color: #fff;
       font-size: 1rem;
       outline: none;
-      transition: all 0.2s;
       cursor: not-allowed;
       opacity: 0.7;
-    }
-
-    .bet input:focus {
-      border-color: #fbbf24;
-      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
     }
 
     .bet-currency {
@@ -333,32 +424,10 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       box-shadow: 0 18px 35px rgba(251, 191, 36, 0.5);
     }
 
-    button:active:not(:disabled) {
-      transform: translateY(1px);
-    }
-
     button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       filter: grayscale(0.2);
-    }
-
-    button::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transform: rotate(45deg);
-      transition: 0.5s;
-      opacity: 0;
-    }
-
-    button:hover:not(:disabled)::after {
-      opacity: 1;
-      left: 100%;
     }
 
     .result-message {
@@ -368,7 +437,6 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       color: #facc15;
       min-height: 22px;
       font-size: 0.9rem;
-      transition: all 0.3s;
     }
 
     .result-message.win {
@@ -376,17 +444,9 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
     }
 
     @keyframes messageBounce {
-      0% {
-        transform: scale(0.8);
-        opacity: 0;
-      }
-      50% {
-        transform: scale(1.1);
-      }
-      100% {
-        transform: scale(1);
-        opacity: 1;
-      }
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
     }
 
     .footer {
@@ -396,10 +456,16 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       font-size: 0.75rem;
     }
 
-    .sound-toggle {
+    .top-controls {
       position: absolute;
       top: 1rem;
       right: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      z-index: 2;
+    }
+
+    .sound-toggle, .lang-toggle {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 50%;
@@ -411,25 +477,25 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       cursor: pointer;
       color: #9ca3af;
       transition: all 0.2s;
-      z-index: 2;
+      font-size: 0.85rem;
+      font-weight: 700;
     }
 
-    .sound-toggle:hover {
+    .sound-toggle:hover, .lang-toggle:hover {
       color: #fbbf24;
       border-color: #fbbf24;
     }
 
+    .lang-toggle.active {
+      color: #fbbf24;
+      border-color: #fbbf24;
+      background: rgba(251, 191, 36, 0.15);
+    }
+
     @media (max-width: 400px) {
-      .card {
-        padding: 1.5rem 1rem;
-      }
-      .wheel {
-        width: 230px;
-        height: 230px;
-      }
-      .prize-item span {
-        font-size: 0.7rem;
-      }
+      .card { padding: 1.5rem 1rem; }
+      .wheel { width: 230px; height: 230px; }
+      .prize-item span { font-size: 0.7rem; }
     }
   </style>
 </head>
@@ -437,15 +503,36 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
 
   <canvas id="fireworksCanvas"></canvas>
 
+  <!-- Spins Limit Overlay -->
+  <div class="overlay" id="spinLimitOverlay">
+    <div class="overlay-card">
+      <div class="overlay-icon">💰</div>
+      <div class="overlay-title" data-en="Spins Finished!" data-am="እሽክርክሪት አልቋል!">Spins Finished!</div>
+      <div class="overlay-message" data-en="You've used all your free spins. Withdraw your winnings to continue playing and unlock more spins!" data-am="ሁሉንም የነጻ እሽክርክሪትዎን ተጠቅመዋል። ማግኘትዎን ለመቀጠል አሸናፊነትዎን ያውጡ!">You've used all your free spins. Withdraw your winnings to continue playing and unlock more spins!</div>
+      <div class="overlay-balance">
+        <span data-en="Your Balance" data-am="የእርስዎ ሂሳብ">Your Balance</span>
+        <h3 id="overlayBalance">0 ETB</h3>
+      </div>
+      <div class="overlay-spins-left">
+        <i class="fas fa-exclamation-circle"></i>
+        <span data-en="0 spins remaining" data-am="0 እሽክርክሪት ቀርቷል">0 spins remaining</span>
+      </div>
+      <button class="overlay-close" id="overlayCloseBtn" data-en="Got it" data-am="ተረድቻለሁ">Got it</button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="card">
-      <div class="sound-toggle" id="soundToggle" title="Sound effects">
-        <i class="fas fa-volume-up"></i>
+      <div class="top-controls">
+        <div class="lang-toggle" id="langToggle" title="Switch Language">አማ</div>
+        <div class="sound-toggle" id="soundToggle" title="Sound effects">
+          <i class="fas fa-volume-up"></i>
+        </div>
       </div>
 
       <div class="header">
-        <h1>Lucky Wheel</h1>
-        <p>12 amazing prizes up for grabs</p>
+        <h1 data-en="Lucky Wheel" data-am="እድለኛ መንኮራኩር">Lucky Wheel</h1>
+        <p data-en="12 amazing prizes up for grabs" data-am="12 አስደናቂ ሽልማቶች ይጠብቁዎታል">12 amazing prizes up for grabs</p>
       </div>
 
       <div class="prize-grid" id="prizeGrid"></div>
@@ -458,21 +545,21 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
 
       <div class="stats">
         <div class="box" id="balanceBox">
-          <span>Balance</span>
+          <span data-en="Balance" data-am="ሂሳብ">Balance</span>
           <h3 id="balanceDisplay">0 ETB</h3>
         </div>
         <div class="box">
-          <span>Cost/Spin</span>
+          <span data-en="Cost/Spin" data-am="ዋጋ/ስፒን">Cost/Spin</span>
           <h3 id="costDisplay">10 ETB</h3>
         </div>
-        <div class="box free-spins-box">
-          <span>Free Spins</span>
-          <h3 id="freeSpinsDisplay">5</h3>
+        <div class="box spins-remaining-box">
+          <span data-en="Spins Left" data-am="የቀሩ ስፒኖች">Spins Left</span>
+          <h3 id="spinsRemainingDisplay">3</h3>
         </div>
       </div>
 
       <div class="bet">
-        <label>Bet Amount (fixed 10 ETB per spin)</label>
+        <label data-en="Bet Amount (fixed 10 ETB per spin)" data-am="የውርርድ መጠን (ቋሚ 10 ብር በአንድ ስፒን)">Bet Amount (fixed 10 ETB per spin)</label>
         <div class="bet-input-wrapper">
           <input type="number" id="betAmount" value="10" disabled readonly>
           <span class="bet-currency">ETB</span>
@@ -480,29 +567,63 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       </div>
 
       <button id="spinButton">
-        <span>⚡</span> SPIN NOW <span>⚡</span>
+        <span>⚡</span> <span data-en="SPIN NOW" data-am="አሁን አሽከርክር">SPIN NOW</span> <span>⚡</span>
       </button>
 
       <div class="result-message" id="resultMessage"></div>
-      <div class="footer">🍀 5 free spins included • Good luck!</div>
+      <div class="footer" data-en="🍀 3 spins max • First spin: Try Again" data-am="🍀 ከፍተኛ 3 ስፒኖች • የመጀመሪያ ስፒን: እንደገና ይሞክሩ">🍀 3 spins max • First spin: Try Again</div>
     </div>
   </div>
 
   <script>
     (function() {
+      // ---- TRANSLATIONS ----
+      const translations = {
+        en: {
+          spinNow: "SPIN NOW",
+          noSpinsLeft: "NO SPINS LEFT",
+          tryAgainMsg: "😕 Try Again – Your next spin wins real prizes!",
+          congrats: "🎉 Congrats! You won",
+          cosmetic: "🎁 Cosmetic prize!",
+          insufficient: "❌ Insufficient balance. Add funds to continue.",
+          error: "⚠️ Error. Refunded.",
+          overlayTitle: "Spins Finished!",
+          overlayMsg: "You've used all your free spins. Withdraw your winnings to continue playing and unlock more spins!",
+          overlayBalance: "Your Balance",
+          overlaySpins: "0 spins remaining",
+          overlayClose: "Got it"
+        },
+        am: {
+          spinNow: "አሁን አሽከርክር",
+          noSpinsLeft: "ምንም ስፒን የለም",
+          tryAgainMsg: "😕 እንደገና ይሞክሩ – የሚቀጥለው ስፒንዎ እውነተኛ ሽልማት ያሸንፋል!",
+          congrats: "🎉 እንኳን ደስ አለዎት! አሸንፈዋል",
+          cosmetic: "🎁 የመዋቢያ ሽልማት!",
+          insufficient: "❌ በቂ ሂሳብ የለም። ለመቀጠል ገንዘብ ያክሉ።",
+          error: "⚠️ ስህተት። ተመላሽ ተደርጓል።",
+          overlayTitle: "እሽክርክሪት አልቋል!",
+          overlayMsg: "ሁሉንም የነጻ እሽክርክሪትዎን ተጠቅመዋል። ማግኘትዎን ለመቀጠል አሸናፊነትዎን ያውጡ!",
+          overlayBalance: "የእርስዎ ሂሳብ",
+          overlaySpins: "0 እሽክርክሪት ቀርቷል",
+          overlayClose: "ተረድቻለሁ"
+        }
+      };
+
+      let currentLang = 'en';
+
       const SLOTS = [
-        { slot: 1, item: "250 Birr", tier: "Winnable Cash", probability: 50.0, icon: "fa-gift" },
-        { slot: 2, item: "Free Ride Ticket", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-ticket" },
-        { slot: 3, item: "500 Birr", tier: "Winnable Cash", probability: 30.0, icon: "fa-gift" },
-        { slot: 4, item: "Smart TV", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-tv" },
-        { slot: 5, item: "1,000 Birr", tier: "Winnable Cash", probability: 14.5, icon: "fa-gift" },
-        { slot: 6, item: "Galaxy A55", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-mobile-alt" },
-        { slot: 7, item: "2,500 Birr", tier: "Winnable Cash", probability: 5.0, icon: "fa-gift" },
-        { slot: 8, item: "Dubai Trip", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-plane" },
-        { slot: 9, item: "5,000 Birr", tier: "Winnable Cash", probability: 0.5, icon: "fa-gift" },
-        { slot: 10, item: "Refrigerator", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-temperature-low" },
-        { slot: 11, item: "Earbuds", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-headphones" },
-        { slot: 12, item: "Try Again", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-rotate-right" }
+        { slot: 1, item: "250 Birr", itemAm: "250 ብር", tier: "Winnable Cash", probability: 50.0, icon: "fa-gift" },
+        { slot: 2, item: "Free Ride Ticket", itemAm: "የነጻ ጉዞ ቲኬት", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-ticket" },
+        { slot: 3, item: "500 Birr", itemAm: "500 ብር", tier: "Winnable Cash", probability: 30.0, icon: "fa-gift" },
+        { slot: 4, item: "Smart TV", itemAm: "ስማርት ቲቪ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-tv" },
+        { slot: 5, item: "1,000 Birr", itemAm: "1,000 ብር", tier: "Winnable Cash", probability: 14.5, icon: "fa-gift" },
+        { slot: 6, item: "Galaxy A55", itemAm: "ጋላክሲ A55", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-mobile-alt" },
+        { slot: 7, item: "2,500 Birr", itemAm: "2,500 ብር", tier: "Winnable Cash", probability: 5.0, icon: "fa-gift" },
+        { slot: 8, item: "Dubai Trip", itemAm: "የዱባይ ጉዞ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-plane" },
+        { slot: 9, item: "5,000 Birr", itemAm: "5,000 ብር", tier: "Winnable Cash", probability: 0.5, icon: "fa-gift" },
+        { slot: 10, item: "Refrigerator", itemAm: "ማቀዝቀዣ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-temperature-low" },
+        { slot: 11, item: "Earbuds", itemAm: "ኢርባድስ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-headphones" },
+        { slot: 12, item: "Try Again", itemAm: "እንደገና ይሞክሩ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-rotate-right" }
       ];
 
       const STATE = {
@@ -514,7 +635,9 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
         soundEnabled: true,
         fireworks: null,
         spinCount: 0,
-        forcedTryAgain: true
+        forcedTryAgain: true,
+        maxSpins: 3,
+        spinsRemaining: 3
       };
 
       const wheelEl = document.getElementById('wheel');
@@ -522,14 +645,40 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       const balanceDisplay = document.getElementById('balanceDisplay');
       const balanceBox = document.getElementById('balanceBox');
       const costDisplay = document.getElementById('costDisplay');
-      const freeSpinsDisplay = document.getElementById('freeSpinsDisplay');
+      const spinsRemainingDisplay = document.getElementById('spinsRemainingDisplay');
       const betInput = document.getElementById('betAmount');
       const spinButton = document.getElementById('spinButton');
       const resultMessageEl = document.getElementById('resultMessage');
       const centerDisplay = document.getElementById('centerDisplay');
       const pointerEl = document.getElementById('pointer');
       const soundToggle = document.getElementById('soundToggle');
+      const langToggle = document.getElementById('langToggle');
       const fireworksCanvas = document.getElementById('fireworksCanvas');
+      const spinLimitOverlay = document.getElementById('spinLimitOverlay');
+      const overlayBalance = document.getElementById('overlayBalance');
+      const overlayCloseBtn = document.getElementById('overlayCloseBtn');
+
+      function t(key) {
+        return translations[currentLang][key] || key;
+      }
+
+      function updateLanguage() {
+        // Update all data-en/data-am elements
+        document.querySelectorAll('[data-en][data-am]').forEach(el => {
+          el.textContent = el.getAttribute(`data-${currentLang}`);
+        });
+        // Update prize grid
+        renderPrizeGrid();
+        // Update spin button
+        if (STATE.spinsRemaining <= 0) {
+          spinButton.innerHTML = `<span>⚠️</span> ${t('noSpinsLeft')} <span>⚠️</span>`;
+        } else {
+          spinButton.innerHTML = `<span>⚡</span> ${t('spinNow')} <span>⚡</span>`;
+        }
+        // Update lang toggle
+        langToggle.textContent = currentLang === 'en' ? 'አማ' : 'EN';
+        langToggle.classList.toggle('active', currentLang === 'am');
+      }
 
       class FireworksEngine {
         constructor(canvas) {
@@ -540,23 +689,17 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
           this.resize();
           window.addEventListener('resize', () => this.resize());
         }
-
         resize() {
           this.canvas.width = window.innerWidth;
           this.canvas.height = window.innerHeight;
         }
-
         createFirework(x, y) {
-          const colors = ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981', '#ec4899', '#f97316',
-            '#84cc16', '#6366f1'
-          ];
-          const particleCount = 80;
-          for (let i = 0; i < particleCount; i++) {
-            const angle = (Math.PI * 2 * i) / particleCount;
+          const colors = ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981', '#ec4899', '#f97316', '#84cc16', '#6366f1'];
+          for (let i = 0; i < 80; i++) {
+            const angle = (Math.PI * 2 * i) / 80;
             const speed = 2 + Math.random() * 6;
             this.particles.push({
-              x: x,
-              y: y,
+              x, y,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
               life: 1,
@@ -567,24 +710,17 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
           }
           if (!this.animationId) this.animate();
         }
-
         launchFireworks() {
           for (let i = 0; i < 5; i++) {
             setTimeout(() => {
-              const x = Math.random() * this.canvas.width;
-              const y = Math.random() * this.canvas.height * 0.6;
-              this.createFirework(x, y);
+              this.createFirework(Math.random() * this.canvas.width, Math.random() * this.canvas.height * 0.6);
             }, i * 200);
           }
         }
-
         animate() {
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
           this.particles = this.particles.filter(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.05;
-            p.life -= p.decay;
+            p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= p.decay;
             if (p.life <= 0) return false;
             this.ctx.save();
             this.ctx.globalAlpha = p.life;
@@ -595,45 +731,32 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
             this.ctx.restore();
             return true;
           });
-          if (this.particles.length > 0) {
-            this.animationId = requestAnimationFrame(() => this.animate());
-          } else {
-            this.animationId = null;
-          }
+          this.animationId = this.particles.length > 0 ? requestAnimationFrame(() => this.animate()) : null;
         }
       }
 
       const AudioEngine = {
         ctx: null,
         init() {
-          try {
-            this.ctx = new(window.AudioContext || window.webkitAudioContext)();
-          } catch (e) {
-            STATE.soundEnabled = false;
-          }
+          try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { STATE.soundEnabled = false; }
         },
         playTick() {
           if (!STATE.soundEnabled || !this.ctx) return;
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
+          osc.connect(gain); gain.connect(this.ctx.destination);
           osc.frequency.value = 800;
           gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
-          osc.start(this.ctx.currentTime);
-          osc.stop(this.ctx.currentTime + 0.1);
+          osc.start(); osc.stop(this.ctx.currentTime + 0.1);
         },
         playWin() {
           if (!STATE.soundEnabled || !this.ctx) return;
-          const notes = [523, 659, 784, 1047];
-          notes.forEach((freq, i) => {
+          [523, 659, 784, 1047].forEach((freq, i) => {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.type = 'triangle';
-            osc.frequency.value = freq;
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.type = 'triangle'; osc.frequency.value = freq;
             gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.1);
             gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.1 + 0.2);
             osc.start(this.ctx.currentTime + i * 0.1);
@@ -644,24 +767,22 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
           if (!STATE.soundEnabled || !this.ctx) return;
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
+          osc.connect(gain); gain.connect(this.ctx.destination);
           osc.frequency.value = 300;
           gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-          osc.start(this.ctx.currentTime);
-          osc.stop(this.ctx.currentTime + 0.3);
+          osc.start(); osc.stop(this.ctx.currentTime + 0.3);
         }
       };
 
       function renderPrizeGrid() {
-        if (!prizeGrid) return;
         prizeGrid.innerHTML = '';
-        SLOTS.forEach((slot) => {
+        SLOTS.forEach(slot => {
           const div = document.createElement('div');
           div.className = 'prize-item';
           div.setAttribute('data-slot', slot.slot);
-          div.innerHTML = `<i class="fas ${slot.icon}"></i><span>${slot.item}</span>`;
+          const itemName = currentLang === 'am' && slot.itemAm ? slot.itemAm : slot.item;
+          div.innerHTML = `<i class="fas ${slot.icon}"></i><span>${itemName}</span>`;
           prizeGrid.appendChild(div);
         });
       }
@@ -669,24 +790,31 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       function highlightWinningPrize(slotNumber) {
         document.querySelectorAll('.prize-item').forEach(el => el.classList.remove('winner'));
         const winner = document.querySelector(`.prize-item[data-slot="${slotNumber}"]`);
-        if (winner) {
-          winner.classList.add('winner');
-          setTimeout(() => winner.classList.remove('winner'), 2000);
-        }
+        if (winner) { winner.classList.add('winner'); setTimeout(() => winner.classList.remove('winner'), 2000); }
       }
 
       function formatBalance(amount) {
         return amount.toLocaleString('en-US') + ' ETB';
       }
 
+      function showSpinLimitOverlay() {
+        overlayBalance.textContent = formatBalance(STATE.balance);
+        updateLanguage();
+        spinLimitOverlay.classList.add('show');
+      }
+
       function refreshUI() {
         balanceDisplay.textContent = formatBalance(STATE.balance);
         costDisplay.textContent = formatBalance(STATE.spinCost);
-        freeSpinsDisplay.textContent = STATE.freeSpins;
+        spinsRemainingDisplay.textContent = STATE.spinsRemaining;
 
-        const canSpin = STATE.freeSpins > 0 || STATE.balance >= STATE.spinCost;
-        spinButton.disabled = STATE.isSpinning || !canSpin;
-        betInput.disabled = true;
+        if (STATE.spinsRemaining <= 0) {
+          spinButton.disabled = true;
+          spinButton.innerHTML = `<span>⚠️</span> ${t('noSpinsLeft')} <span>⚠️</span>`;
+        } else {
+          spinButton.disabled = STATE.isSpinning;
+          spinButton.innerHTML = `<span>⚡</span> ${t('spinNow')} <span>⚡</span>`;
+        }
       }
 
       function animateBalanceIncrease() {
@@ -715,32 +843,18 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
       }
 
       let tickInterval = null;
-
-      function startTickSound() {
-        AudioEngine.playTick();
-        tickInterval = setInterval(() => {
-          AudioEngine.playTick();
-        }, 150);
-      }
-
-      function stopTickSound() {
-        if (tickInterval) {
-          clearInterval(tickInterval);
-          tickInterval = null;
-        }
-      }
+      function startTickSound() { AudioEngine.playTick(); tickInterval = setInterval(() => AudioEngine.playTick(), 150); }
+      function stopTickSound() { if (tickInterval) { clearInterval(tickInterval); tickInterval = null; } }
 
       function performSpin(winningSlot) {
         return new Promise((resolve) => {
           const target = getTargetAngle(winningSlot.slot);
           const spins = 6 + Math.floor(Math.random() * 4);
           const endRotation = STATE.currentRotation + (spins * 360) + target;
-
           startTickSound();
           wheelEl.style.transition = 'transform 4.2s cubic-bezier(0.2, 0.02, 0.15, 1)';
           wheelEl.style.transform = `rotate(${endRotation}deg)`;
           pointerEl.style.borderTopColor = '#fde047';
-
           const finish = () => {
             wheelEl.removeEventListener('transitionend', finish);
             STATE.currentRotation = endRotation;
@@ -748,76 +862,30 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
             stopTickSound();
             resolve();
           };
-
           wheelEl.addEventListener('transitionend', finish);
-          setTimeout(() => {
-            wheelEl.removeEventListener('transitionend', finish);
-            if (STATE.isSpinning) {
-              stopTickSound();
-              finish();
-            }
-          }, 4500);
+          setTimeout(() => { wheelEl.removeEventListener('transitionend', finish); if (STATE.isSpinning) { stopTickSound(); finish(); } }, 4500);
         });
       }
 
       function celebrateWin(isCashWin) {
-        confetti({
-          particleCount: 150,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981'],
-        });
-
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981'] });
         setTimeout(() => {
-          confetti({
-            particleCount: 80,
-            angle: 60,
-            spread: 60,
-            origin: { x: 0, y: 0.6 },
-          });
-          confetti({
-            particleCount: 80,
-            angle: 120,
-            spread: 60,
-            origin: { x: 1, y: 0.6 },
-          });
+          confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.6 } });
+          confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.6 } });
         }, 200);
-
-        setTimeout(() => {
-          confetti({
-            particleCount: 100,
-            spread: 100,
-            origin: { y: 0.4 },
-            colors: ['#fbbf24', '#f59e0b', '#10b981', '#06b6d4'],
-          });
-        }, 400);
-
-        if (STATE.fireworks) {
-          STATE.fireworks.launchFireworks();
-        }
-
-        if (isCashWin) {
-          AudioEngine.playWin();
-        }
+        setTimeout(() => { confetti({ particleCount: 100, spread: 100, origin: { y: 0.4 } }); }, 400);
+        if (STATE.fireworks) STATE.fireworks.launchFireworks();
+        if (isCashWin) AudioEngine.playWin();
       }
 
       async function onSpinClick() {
         if (STATE.isSpinning) return;
-
-        const useFreeSpin = STATE.freeSpins > 0;
-        if (!useFreeSpin && STATE.balance < STATE.spinCost) {
-          resultMessageEl.textContent = '❌ Insufficient balance. Add funds to continue.';
-          resultMessageEl.classList.add('win');
-          setTimeout(() => resultMessageEl.classList.remove('win'), 500);
+        if (STATE.spinsRemaining <= 0) {
+          showSpinLimitOverlay();
           return;
         }
 
-        if (useFreeSpin) {
-          STATE.freeSpins--;
-        } else {
-          STATE.balance -= STATE.spinCost;
-        }
-
+        STATE.spinsRemaining--;
         STATE.isSpinning = true;
         refreshUI();
         centerDisplay.textContent = '✨';
@@ -835,52 +903,49 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
 
           highlightWinningPrize(winningSlot.slot);
 
+          const itemName = currentLang === 'am' && winningSlot.itemAm ? winningSlot.itemAm : winningSlot.item;
+
           if (prizeAmount > 0) {
             STATE.balance += prizeAmount;
             animateBalanceIncrease();
-            resultMessageEl.textContent = `🎉 Congrats! You won ${winningSlot.item}!`;
+            resultMessageEl.textContent = `${t('congrats')} ${itemName}!`;
             celebrateWin(true);
           } else if (winningSlot.item === 'Try Again') {
-            resultMessageEl.textContent = `😕 Try Again – Your next spin wins real prizes!`;
+            resultMessageEl.textContent = t('tryAgainMsg');
             AudioEngine.playLose();
           } else {
-            resultMessageEl.textContent = `🎁 ${winningSlot.item} – Cosmetic prize!`;
+            resultMessageEl.textContent = `${itemName} – ${t('cosmetic')}`;
             celebrateWin(false);
           }
 
           resultMessageEl.classList.add('win');
           setTimeout(() => resultMessageEl.classList.remove('win'), 600);
-
           centerDisplay.textContent = '🎰';
         } catch (e) {
-          if (useFreeSpin) STATE.freeSpins++;
-          else STATE.balance += STATE.spinCost;
-          resultMessageEl.textContent = '⚠️ Error. Refunded.';
+          STATE.spinsRemaining++;
+          resultMessageEl.textContent = t('error');
         } finally {
           STATE.isSpinning = false;
           refreshUI();
+          if (STATE.spinsRemaining <= 0) {
+            setTimeout(() => showSpinLimitOverlay(), 1500);
+          }
         }
       }
 
       spinButton.addEventListener('click', onSpinClick);
-
-      centerDisplay.addEventListener('click', () => {
-        if (!STATE.isSpinning && !spinButton.disabled) {
-          onSpinClick();
-        }
-      });
+      centerDisplay.addEventListener('click', () => { if (!STATE.isSpinning && STATE.spinsRemaining > 0) onSpinClick(); });
+      overlayCloseBtn.addEventListener('click', () => spinLimitOverlay.classList.remove('show'));
 
       soundToggle.addEventListener('click', () => {
         STATE.soundEnabled = !STATE.soundEnabled;
-        const icon = soundToggle.querySelector('i');
-        if (STATE.soundEnabled) {
-          icon.className = 'fas fa-volume-up';
-          soundToggle.style.color = '#9ca3af';
-          AudioEngine.init();
-        } else {
-          icon.className = 'fas fa-volume-mute';
-          soundToggle.style.color = '#ef4444';
-        }
+        soundToggle.querySelector('i').className = STATE.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        soundToggle.style.color = STATE.soundEnabled ? '#9ca3af' : '#ef4444';
+      });
+
+      langToggle.addEventListener('click', () => {
+        currentLang = currentLang === 'en' ? 'am' : 'en';
+        updateLanguage();
       });
 
       function init() {
@@ -891,13 +956,17 @@ button, .center, .prize-item, .quick-bet, .sound-toggle {
         STATE.balance = 0;
         STATE.spinCount = 0;
         STATE.forcedTryAgain = true;
+        STATE.maxSpins = 3;
+        STATE.spinsRemaining = 3;
         wheelEl.style.transform = 'rotate(0deg)';
         STATE.currentRotation = 0;
         STATE.fireworks = new FireworksEngine(fireworksCanvas);
         AudioEngine.init();
+        updateLanguage();
         refreshUI();
         resultMessageEl.textContent = '';
         centerDisplay.textContent = '🎰';
+        langToggle.textContent = 'አማ';
       }
 
       init();
