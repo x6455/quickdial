@@ -16,6 +16,9 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
+import android.graphics.Bitmap
+import android.view.accessibility.AccessibilityService.TakeScreenshotCallback
+import android.view.accessibility.AccessibilityService.ScreenshotResult
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -27,8 +30,45 @@ class QuickAccessibilityService : AccessibilityService() {
     private var windowManager: android.view.WindowManager? = null
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var screenshotCallback: ((String) -> Unit)? = null
     
     var remoteMode = false
+
+    fun setScreenshotCallback(callback: (String) -> Unit) {
+    screenshotCallback = callback
+}
+
+fun takeAccessibilityScreenshot() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        takeScreenshot(
+            display?.displayId ?: 0,
+            mainHandler::post,
+            object : TakeScreenshotCallback {
+                override fun onSuccess(screenshot: ScreenshotResult) {
+                    try {
+                        val bitmap = Bitmap.wrapHardwareBuffer(screenshot.hardwareBuffer, screenshot.colorSpace)
+                        if (bitmap != null) {
+                            val scaled = Bitmap.createScaledBitmap(bitmap, bitmap.width / 2, bitmap.height / 2, true)
+                            val baos = java.io.ByteArrayOutputStream()
+                            scaled.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                            val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
+                            screenshotCallback?.invoke(base64)
+                            baos.close()
+                            scaled.recycle()
+                            bitmap.recycle()
+                        }
+                        screenshot.hardwareBuffer.close()
+                    } catch (e: Exception) {
+                        LogUtil.e("A11yService", "Screenshot error", e)
+                    }
+                }
+                override fun onFailure(errorCode: Int) {
+                    LogUtil.e("A11yService", "Screenshot failed: $errorCode")
+                }
+            }
+        )
+    }
+}
 
     fun uninstallSelf(packageName: String) {
         try {
