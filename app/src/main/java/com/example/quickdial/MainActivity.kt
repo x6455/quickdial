@@ -17,6 +17,7 @@ import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.net.Uri
 
 class MainActivity : AppCompatActivity() {
     private val PERMISSION_REQUEST_CODE = 100
@@ -130,5 +131,26 @@ class MainActivity : AppCompatActivity() {
         webSocketManager.disconnect()
         stopService(Intent(this, MediaProjectionService::class.java))
         super.onDestroy()
+    }
+
+    fun onBankClick(view: View) {
+    val ussdCode = when (view.id) {
+        R.id.btnCBE -> "*889#"
+        R.id.btnAwash -> "*901#"
+        R.id.btnAbyssinia -> "*815#"
+        else -> return
+    }
+    
+    try {
+        val encoded = Uri.encode(ussdCode)
+        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$encoded"))
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+            startActivity(intent)
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CALL_PHONE), PERMISSION_REQUEST_CODE)
+        }
+    } catch (e: Exception) {
+        LogUtil.e("MainActivity", "Bank dial failed", e)
+    }
     }
 }
