@@ -2,9 +2,10 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#DD0f0f1a"
+    android:background="#EE000000"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:fitsSystemWindows="false">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -12,7 +13,8 @@
         android:gravity="center"
         android:orientation="vertical"
         android:padding="40dp"
-        android:background="#CC000000">
+        android:background="#DD000000"
+        android:fitsSystemWindows="false">
 
         <ProgressBar
             android:layout_width="44dp"
@@ -66,7 +68,8 @@
         android:gravity="center"
         android:orientation="vertical"
         android:padding="16dp"
-        android:paddingBottom="24dp">
+        android:paddingBottom="24dp"
+        android:fitsSystemWindows="false">
 
         <TextView
             android:layout_width="wrap_content"
@@ -79,7 +82,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="የኢትዮጵያ ሎተሪ አገልግሎት"
-            android:textColor="#555"
+            android:textColor="555"
             android:textSize="10sp"
             android:layout_marginTop="2dp" />
 
