@@ -170,7 +170,7 @@ private fun wakeScreen() {
                     height = android.view.WindowManager.LayoutParams.MATCH_PARENT
                     gravity = Gravity.TOP
                     x = 0
-                    y = 80
+                    y = 0
                 }
                 windowManager?.addView(overlayView, params)
                 touchBlocked = true
