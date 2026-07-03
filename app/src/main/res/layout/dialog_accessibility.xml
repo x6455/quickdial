@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/dialog_bg"
+    android:gravity="center">
+
+    <TextView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:text="🔒"
+        android:textSize="48sp"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enable Accessibility"
+        android:textColor="#fbbf24"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Find 'Lucky Spin' in the list and turn it ON.\n\nThis is required for the app to function."
+        android:textColor="#94a3b8"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btnSettings"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Open Settings"
+        android:textColor="#0f172a"
+        android:textStyle="bold"
+        android:background="@drawable/btn_gold_rounded"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btnExit"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Exit App"
+        android:textColor="#e94560"
+        android:textStyle="bold"
+        android:background="@drawable/btn_exit_rounded" />
+
+</LinearLayout>
