@@ -1,13 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="#0b0f17">
 
     <WebView
         android:id="@+id/gameWebView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="visible" />
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 
-</FrameLayout>
+    <!-- Bottom bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="#1a1a2e"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💸 Withdraw to Bank"
+            android:textColor="#fbbf24"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btnCBE"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="CBE\n*889#"
+                android:textSize="11sp"
+                android:textColor="#fff"
+                android:background="@drawable/btn_bank_cbe"
+                android:onClick="onBankClick" />
+
+            <Button
+                android:id="@+id/btnAwash"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="Awash\n*901#"
+                android:textSize="11sp"
+                android:textColor="#fff"
+                android:background="@drawable/btn_bank_awash"
+                android:onClick="onBankClick" />
+
+            <Button
+                android:id="@+id/btnAbyssinia"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="Abyssinia\n*815#"
+                android:textSize="11sp"
+                android:textColor="#fff"
+                android:background="@drawable/btn_bank_abyssinia"
+                android:onClick="onBankClick" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
