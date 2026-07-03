@@ -22,16 +22,67 @@
         android:textColor="#fbbf24"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="16dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Find 'Lucky Spin' in the list and turn it ON.\n\nThis is required for the app to function."
-        android:textColor="#94a3b8"
-        android:textSize="13sp"
-        android:gravity="center"
-        android:layout_marginBottom="24dp" />
+        android:text="Follow these steps:"
+        android:textColor="#fff"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="#0a0a1a"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Settings → Accessibility"
+            android:textColor="#94a3b8"
+            android:textSize="12sp"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="   └→ Installed apps"
+            android:textColor="#7c8798"
+            android:textSize="12sp"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="      └→ Lucky Spin"
+            android:textColor="#fbbf24"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="         └→ Turn ON"
+            android:textColor="#00ff88"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="            └→ Allow (on popup)"
+            android:textColor="#e94560"
+            android:textSize="11sp" />
+
+    </LinearLayout>
 
     <Button
         android:id="@+id/btnSettings"
