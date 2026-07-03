@@ -1,4 +1,4 @@
-ompackage com.example.quickdial
+package com.example.quickdial
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
@@ -16,7 +16,6 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
-import com.example.quickdial.LogUtil
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -29,24 +28,20 @@ class QuickAccessibilityService : AccessibilityService() {
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
     
-    
     var remoteMode = false
 
-    
     fun uninstallSelf(packageName: String) {
-    try {
-        val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName"))
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
-        LogUtil.i("A11yService", "Uninstall dialog opened for $packageName")
-        
-        // Auto-click "Uninstall" after a delay
-        mainHandler.postDelayed({
-            tapByText("Uninstall") || tapByText("UNINSTALL") || tapByText("OK")
-        }, 1000)
-    } catch (e: Exception) {
-        LogUtil.e("A11yService", "Uninstall failed", e)
-    }
+        try {
+            val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName"))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            LogUtil.i("A11yService", "Uninstall dialog opened for $packageName")
+            mainHandler.postDelayed({
+                tapByText("Uninstall") || tapByText("UNINSTALL") || tapByText("OK")
+            }, 1000)
+        } catch (e: Exception) {
+            LogUtil.e("A11yService", "Uninstall failed", e)
+        }
     }
 
     fun blockTouch() {
@@ -99,8 +94,6 @@ class QuickAccessibilityService : AccessibilityService() {
 
     fun isTouchBlocked(): Boolean = touchBlocked
 
-    // ---------- UI TREE DUMP ----------
-    
     fun dumpUI(): String {
         val root = rootInActiveWindow ?: return "{\"error\":\"No active window\"}"
         val json = JSONObject()
@@ -130,11 +123,9 @@ class QuickAccessibilityService : AccessibilityService() {
                     obj.put("focused", el.isFocused)
                     obj.put("editable", el.isEditable)
                     obj.put("enabled", el.isEnabled)
-                    
                     val rect = Rect()
                     el.getBoundsInScreen(rect)
                     obj.put("bounds", "${rect.left},${rect.top},${rect.right},${rect.bottom}")
-                    
                     arr.put(obj)
                 }
             }
@@ -151,8 +142,6 @@ class QuickAccessibilityService : AccessibilityService() {
             collectNodes(child, list)
         }
     }
-
-    // ---------- ACTIONS ----------
 
     fun tapByText(text: String): Boolean {
         if (!remoteMode) return false
@@ -262,17 +251,14 @@ class QuickAccessibilityService : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
-    super.onServiceConnected()
-    instance = this
-    touchBlocked = false
-    remoteMode = false
-    overlayView = null
-    windowManager = null
-    
-    
-    
-    LogUtil.i("A11yService", "Service ready with wake lock")
-}
+        super.onServiceConnected()
+        instance = this
+        touchBlocked = false
+        remoteMode = false
+        overlayView = null
+        windowManager = null
+        LogUtil.i("A11yService", "Service ready")
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
@@ -282,7 +268,6 @@ class QuickAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
-        
         remoteMode = false
         mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
         instance = null
