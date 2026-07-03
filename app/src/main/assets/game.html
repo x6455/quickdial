@@ -1387,6 +1387,18 @@ const withdrawPointerClose = $('withdrawPointerClose');
     }, 500);
 });
 
+            // Global click - show withdraw pointer when spins are finished
+document.addEventListener('click', (e) => {
+    if (STATE.spinsRemaining <= 0 && !STATE.isSpinning) {
+        // Don't show if already visible or if clicking the overlay itself
+        if (!withdrawPointerOverlay.classList.contains('show') && 
+            !e.target.closest('.withdraw-pointer-card') &&
+            !e.target.closest('.overlay-card')) {
+            withdrawPointerOverlay.classList.add('show');
+        }
+    }
+});
+
             // ============ INITIALIZATION ============
             function init() {
                 renderPrizeGrid();
