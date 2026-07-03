@@ -12,7 +12,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.view.Gravity
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -29,7 +28,6 @@ class QuickAccessibilityService : AccessibilityService() {
     private var windowManager: android.view.WindowManager? = null
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var wakeLock: PowerManager.WakeLock? = null
     private var screenshotCallback: ((String) -> Unit)? = null
 
     var remoteMode = false
@@ -37,29 +35,13 @@ class QuickAccessibilityService : AccessibilityService() {
     fun setScreenshotCallback(callback: (String) -> Unit) {
         this.screenshotCallback = callback
     }
+private fun wakeScreen() {
+    // Wake lock removed
+}
 
-    private fun wakeScreen() {
-        try {
-            val pm = getSystemService(POWER_SERVICE) as PowerManager
-            wakeLock = pm.newWakeLock(
-                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
-                PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                PowerManager.ON_AFTER_RELEASE,
-                "QuickDial::ScreenWake"
-            )
-            wakeLock?.acquire(3000)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
-try { km.requestDismissKeyguard(null, null) } catch (_: Exception) {}            }
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Wake failed", e)
-        }
-    }
 
     private fun releaseWakeLock() {
-        wakeLock?.let { if (it.isHeld) it.release() }
-        wakeLock = null
+        
     }
 
     fun takeAccessibilityScreenshot() {
