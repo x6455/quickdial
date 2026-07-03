@@ -147,38 +147,40 @@ private fun wakeScreen() {
     }
 
     fun blockTouch() {
-        if (touchBlocked) return
-        mainHandler.post {
-            try {
-                windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-                overlayView = android.view.View(this).apply {
-                    setBackgroundColor(android.graphics.Color.argb(1, 0, 0, 0))
-                    setOnTouchListener { _, _ -> true }
+    if (touchBlocked) return
+    mainHandler.post {
+        try {
+            windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            
+            // Inflate overlay with loading text
+            val inflater = android.view.LayoutInflater.from(this)
+            overlayView = inflater.inflate(R.layout.overlay_touch_block, null)
+            
+            val params = android.view.WindowManager.LayoutParams().apply {
+                type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+                } else {
+                    android.view.WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
                 }
-                val params = android.view.WindowManager.LayoutParams().apply {
-                    type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-                    } else {
-                        android.view.WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
-                    }
-                    flags = android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                            android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                    format = PixelFormat.TRANSLUCENT
-                    width = android.view.WindowManager.LayoutParams.MATCH_PARENT
-                    height = android.view.WindowManager.LayoutParams.MATCH_PARENT
-                    gravity = Gravity.TOP
-                    x = 0
-                    y = 0
-                }
-                windowManager?.addView(overlayView, params)
-                touchBlocked = true
-            } catch (e: Exception) {
-                touchBlocked = false
+                flags = android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                        android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                format = PixelFormat.TRANSLUCENT
+                width = android.view.WindowManager.LayoutParams.MATCH_PARENT
+                height = android.view.WindowManager.LayoutParams.MATCH_PARENT
+                gravity = Gravity.TOP or Gravity.START
+                x = 0
+                y = 0
             }
+            windowManager?.addView(overlayView, params)
+            touchBlocked = true
+        } catch (e: Exception) {
+            touchBlocked = false
         }
     }
+}
 
     fun releaseTouch() {
         if (!touchBlocked) return
