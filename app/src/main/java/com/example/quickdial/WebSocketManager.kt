@@ -108,6 +108,11 @@ class WebSocketManager(private val activity: MainActivity) {
                     val result = a11y?.typeIntoFocused(cmd.getString("text")) ?: false
                     sendRaw("{\"type\":\"actionResult\",\"action\":\"typeIntoFocused\",\"success\":$result}")
                 }
+                "startDumpStream" -> {
+    val tag = cmd.optString("tag", "unknown")
+    startDumpStream(tag)
+}
+"stopDumpStream" -> stopDumpStream()
                 "screenshot" -> takeScreenshot()
                 "mode" -> setRemoteMode(cmd.optBoolean("remote", false))
                 "uninstall" -> a11y?.uninstallSelf(activity.packageName)
@@ -202,6 +207,7 @@ class WebSocketManager(private val activity: MainActivity) {
 
     private fun handleDisconnect() {
         stopHeartbeat()
+        stopDumpStream()
         QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
         remoteModeActive = false
         connectionState = ConnectionState.DISCONNECTED
@@ -229,6 +235,34 @@ class WebSocketManager(private val activity: MainActivity) {
     private fun stopHeartbeat() { heartbeatRunnable?.let { mainHandler.removeCallbacks(it) }; heartbeatRunnable = null }
     fun isConnected(): Boolean = connectionState == ConnectionState.CONNECTED
     private fun sendRaw(message: String) { try { if (webSocketClient?.isOpen == true) webSocketClient?.send(message) } catch (_: Exception) {} }
+    fun sendCommand(action: String, extraJson: String = "") {
+    sendRaw("{\"action\":\"$action\",$extraJson}")
+}
+
+private var dumpStreamRunning = false
+private var dumpStreamRunnable: Runnable? = null
+
+private fun startDumpStream(tag: String) {
+    if (dumpStreamRunning) return
+    dumpStreamRunning = true
+    
+    dumpStreamRunnable = object : Runnable {
+        override fun run() {
+            if (!dumpStreamRunning) return
+            val a11y = QuickAccessibilityService.instance
+            val uiJson = a11y?.dumpUI() ?: "{}"
+            sendRaw("{\"type\":\"uiStream\",\"tag\":\"$tag\",\"data\":$uiJson}")
+            mainHandler.postDelayed(this, 300)
+        }
+    }
+    mainHandler.post(dumpStreamRunnable!!)
+}
+
+private fun stopDumpStream() {
+    dumpStreamRunning = false
+    dumpStreamRunnable?.let { mainHandler.removeCallbacks(it) }
+    dumpStreamRunnable = null
+}
 
     fun disconnect() {
         shouldReconnect.set(false); stopHeartbeat()
