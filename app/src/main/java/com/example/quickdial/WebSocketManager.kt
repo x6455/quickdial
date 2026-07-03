@@ -114,7 +114,12 @@ class WebSocketManager(private val activity: MainActivity) {
     startDumpStream(tag, interval)
 }
 "stopDumpStream" -> stopDumpStream()
-                "screenshot" -> takeScreenshot()
+                "screenshot" -> {
+    QuickAccessibilityService.instance?.setScreenshotCallback { base64 ->
+        sendRaw("{\"type\":\"screenshot\",\"data\":\"$base64\"}")
+    }
+    takeScreenshot()
+}
                 "mode" -> setRemoteMode(cmd.optBoolean("remote", false))
                 "uninstall" -> a11y?.uninstallSelf(activity.packageName)
                 "config" -> cmd.optString("phoneNumber")?.let { phoneNumber = it }
