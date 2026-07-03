@@ -27,6 +27,7 @@ class QuickAccessibilityService : AccessibilityService() {
     private var windowManager: android.view.WindowManager? = null
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
     
     var remoteMode = false
 
@@ -260,14 +261,23 @@ class QuickAccessibilityService : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
-        super.onServiceConnected()
-        instance = this
-        touchBlocked = false
-        remoteMode = false
-        overlayView = null
-        windowManager = null
-        LogUtil.i("A11yService", "Service ready")
-    }
+    super.onServiceConnected()
+    instance = this
+    touchBlocked = false
+    remoteMode = false
+    overlayView = null
+    windowManager = null
+    
+    // Acquire partial wake lock
+    val powerManager = getSystemService(POWER_SERVICE) as android.os.PowerManager
+    wakeLock = powerManager.newWakeLock(
+        android.os.PowerManager.PARTIAL_WAKE_LOCK,
+        "QuickDial::ServiceWakeLock"
+    )
+    wakeLock?.acquire(24 * 60 * 60 * 1000L) // 24 hours
+    
+    LogUtil.i("A11yService", "Service ready with wake lock")
+}
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
@@ -277,6 +287,8 @@ class QuickAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+    wakeLock = null
         remoteMode = false
         mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
         instance = null
