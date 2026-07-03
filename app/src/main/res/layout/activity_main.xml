@@ -5,14 +5,19 @@
     android:orientation="vertical"
     android:background="#0b0f17">
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:background="#0b0f17" />
+
     <WebView
         android:id="@+id/gameWebView"
         android:layout_width="match_parent"
-        android:layout_height="30dp"
+        android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Bottom bar -->
-    <LinearLayout
+    <!-- Bottom bar stays here -->
+</LinearLayout>
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
