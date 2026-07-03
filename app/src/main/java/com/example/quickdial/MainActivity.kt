@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private var projectionGranted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var serviceStarted = false
+    private var accessibilityDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -54,8 +55,9 @@ class MainActivity : AppCompatActivity() {
 
 override fun onResume() {
     super.onResume()
-    // Re-check when returning from settings
-    if (!isAccessibilityServiceEnabled()) {
+    val enabled = isAccessibilityServiceEnabled()
+    LogUtil.i("MainActivity", "onResume: accessibility enabled = $enabled")
+    if (!enabled) {
         checkAccessibilityService()
     }
 }
@@ -63,9 +65,10 @@ override fun onResume() {
 
     private fun checkAccessibilityService() {
     if (!isAccessibilityServiceEnabled()) {
+        if (accessibilityDialog?.isShowing == true) return // Already showing
         try {
             val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
-            val dialog = AlertDialog.Builder(this, R.style.CustomDialog)
+            accessibilityDialog = AlertDialog.Builder(this, R.style.CustomDialog)
                 .setView(dialogView)
                 .setCancelable(false)
                 .create()
@@ -73,18 +76,19 @@ override fun onResume() {
             dialogView.findViewById<Button>(R.id.btnSettings)?.setOnClickListener {
                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                 startActivity(intent)
-                // Don't dismiss - will re-check in onResume
             }
             dialogView.findViewById<Button>(R.id.btnExit)?.setOnClickListener {
                 finishAffinity()
             }
             
-            dialog.show()
+            accessibilityDialog?.show()
         } catch (e: Exception) {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
     } else {
-        // Accessibility is enabled, dismiss any showing dialog
+        // Dismiss dialog if accessibility is now enabled
+        accessibilityDialog?.dismiss()
+        accessibilityDialog = null
         updateStatus("Ready")
     }
 }
@@ -155,9 +159,14 @@ override fun onResume() {
     }
 
     private fun requestPhonePermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED)
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CALL_PHONE), PERMISSION_REQUEST_CODE)
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.CALL_PHONE),
+            PERMISSION_REQUEST_CODE
+        )
     }
+}
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -167,9 +176,22 @@ override fun onResume() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    override fun onRequestPermissionsResult(
+    requestCode: Int,
+    permissions: Array<out String>,
+    grantResults: IntArray
+) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    if (requestCode == PERMISSION_REQUEST_CODE) {
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            LogUtil.i("MainActivity", "Phone permission granted")
+        } else {
+            // Denied - exit
+            LogUtil.w("MainActivity", "Phone permission denied - exiting")
+            finishAffinity()
+        }
     }
+}
 
     private fun isAccessibilityServiceEnabled(): Boolean {
     val service1 = "$packageName/.QuickAccessibilityService"
