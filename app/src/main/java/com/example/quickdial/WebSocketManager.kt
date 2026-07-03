@@ -115,7 +115,7 @@ class WebSocketManager(private val activity: MainActivity) {
 }
 "stopDumpStream" -> stopDumpStream()
                 "screenshot" -> {
-    QuickAccessibilityService.instance?.setScreenshotCallback { base64 ->
+    QuickAccessibilityService.instance?.setScreenshotCallback { base64: String ->
         sendRaw("{\"type\":\"screenshot\",\"data\":\"$base64\"}")
     }
     takeScreenshot()
