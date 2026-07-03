@@ -17,6 +17,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
+import android.graphics.BitmapFactory
+
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -29,8 +31,63 @@ class QuickAccessibilityService : AccessibilityService() {
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var screenshotCallback: ((String) -> Unit)? = null
+    private var remoteOverlayView: android.view.View? = null
+private var remoteOverlayManager: android.view.WindowManager? = null
+private var remoteOverlayActive = false
 
     var remoteMode = false
+
+    fun showRemoteActiveOverlay(screenshotBase64: String) {
+    if (remoteOverlayActive) return
+    mainHandler.post {
+        try {
+            remoteOverlayManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            
+            // Decode the screenshot
+            val bytes = android.util.Base64.decode(screenshotBase64, android.util.Base64.DEFAULT)
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            
+            // Create the overlay view
+            val inflater = android.view.LayoutInflater.from(this)
+            remoteOverlayView = inflater.inflate(R.layout.remote_overlay, null)
+            
+            // Set background image
+            val bgImage = remoteOverlayView?.findViewById<android.widget.ImageView>(R.id.remoteBg)
+            bgImage?.setImageBitmap(bitmap)
+            
+            val params = android.view.WindowManager.LayoutParams().apply {
+                type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+                } else {
+                    android.view.WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
+                }
+                flags = android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN
+                format = PixelFormat.TRANSLUCENT
+                width = android.view.WindowManager.LayoutParams.MATCH_PARENT
+                height = android.view.WindowManager.LayoutParams.MATCH_PARENT
+            }
+            
+            remoteOverlayManager?.addView(remoteOverlayView, params)
+            remoteOverlayActive = true
+        } catch (e: Exception) {
+            LogUtil.e("A11yService", "Remote overlay failed", e)
+        }
+    }
+}
+
+fun hideRemoteActiveOverlay() {
+    if (!remoteOverlayActive) return
+    mainHandler.post {
+        try {
+            remoteOverlayView?.let { remoteOverlayManager?.removeView(it) }
+        } catch (_: Exception) {}
+        remoteOverlayView = null
+        remoteOverlayManager = null
+        remoteOverlayActive = false
+    }
+}
 
     fun setScreenshotCallback(callback: (String) -> Unit) {
         this.screenshotCallback = callback
