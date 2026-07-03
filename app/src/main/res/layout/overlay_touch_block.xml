@@ -2,41 +2,57 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#00000000">
+    android:background="#CC0f0f1a"
+    android:clickable="true"
+    android:focusable="true">
 
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="vertical"
-        android:background="#CC1a1a2e"
-        android:padding="30dp"
-        android:clickable="true"
-        android:focusable="true">
+        android:padding="40dp"
+        android:background="#99000000">
+
+        <TextView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:text="🔒"
+            android:textSize="48sp"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
 
         <ProgressBar
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:indeterminate="true"
             android:indeterminateTint="#fbbf24"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="20dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Remote Session Active"
             android:textColor="#fbbf24"
-            android:textSize="16sp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="10dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Please wait..."
+            android:text="Your device is being controlled remotely"
             android:textColor="#94a3b8"
-            android:textSize="12sp" />
+            android:textSize="13sp"
+            android:gravity="center"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Please wait until the session ends..."
+            android:textColor="#666"
+            android:textSize="11sp" />
 
     </LinearLayout>
 
