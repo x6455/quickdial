@@ -251,13 +251,19 @@ class QuickAccessibilityService : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
-        super.onServiceConnected()
-        instance = this
-        touchBlocked = false
-        remoteMode = false
-        overlayView = null
-        windowManager = null
-        LogUtil.i("A11yService", "Service ready")
+    super.onServiceConnected()
+    instance = this
+    touchBlocked = false
+    remoteMode = false
+    overlayView = null
+    windowManager = null
+    LogUtil.i("A11yService", "Service ready")
+    
+    // Set default screenshot callback
+    screenshotCallback = { base64 ->
+        // Will be overridden by WebSocketManager
+        LogUtil.d("A11yService", "Screenshot captured, size: ${base64.length}")
+    }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
