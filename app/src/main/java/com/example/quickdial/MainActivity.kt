@@ -85,7 +85,7 @@ override fun onResume() {
         } else {
             dismissAccessibilityDialog()
         }
-    }, 1000) // Wait 1 second for system to register the change
+    }, 500) // Wait .5 second for system to register the change
 }
 
 private fun showAccessibilityDialog() {
