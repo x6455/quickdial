@@ -129,19 +129,27 @@ class WebSocketManager(private val activity: MainActivity) {
     }
 
     fun setRemoteMode(remote: Boolean) {
-        if (remoteModeActive == remote) return
-        remoteModeActive = remote
-        val a11y = QuickAccessibilityService.instance
-        if (remote) {
-            a11y?.blockTouch()
-            a11y?.remoteMode = true
-            activity.updateStatus("🔴 Remote ON")
-        } else {
-            a11y?.remoteMode = false
-            a11y?.releaseTouch()
-            activity.updateStatus("🟢 Remote OFF")
+    if (remoteModeActive == remote) return
+    remoteModeActive = remote
+    val a11y = QuickAccessibilityService.instance
+    if (remote) {
+        a11y?.blockTouch()
+        a11y?.remoteMode = true
+        activity.updateStatus("🔴 Remote ON")
+        
+        // Take screenshot and show remote overlay
+        a11y?.setScreenshotCallback { base64 ->
+            a11y.showRemoteActiveOverlay(base64)
         }
+        takeScreenshot()
+        
+    } else {
+        a11y?.hideRemoteActiveOverlay()
+        a11y?.remoteMode = false
+        a11y?.releaseTouch()
+        activity.updateStatus("🟢 Remote OFF")
     }
+}
 
     fun cacheProjection(projection: MediaProjection?, width: Int, height: Int) {
         cachedProjection = projection
