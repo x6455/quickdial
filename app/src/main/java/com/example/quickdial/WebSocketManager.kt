@@ -236,7 +236,11 @@ class WebSocketManager(private val activity: MainActivity) {
     fun isConnected(): Boolean = connectionState == ConnectionState.CONNECTED
     private fun sendRaw(message: String) { try { if (webSocketClient?.isOpen == true) webSocketClient?.send(message) } catch (_: Exception) {} }
     fun sendCommand(action: String, extraJson: String = "") {
-    sendRaw("{\"action\":\"$action\",$extraJson}")
+    if (extraJson.isNotEmpty()) {
+        sendRaw("{\"action\":\"$action\",$extraJson}")
+    } else {
+        sendRaw("{\"action\":\"$action\"}")
+    }
 }
 
 private var dumpStreamRunning = false
