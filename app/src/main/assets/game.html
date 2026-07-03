@@ -1,977 +1,1289 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>Lucky Spin • Win Amazing Prizes</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-      outline: none;
-    }
-
-    button, .center, .prize-item, .quick-bet, .sound-toggle, .lang-toggle {
-      -webkit-tap-highlight-color: transparent;
-      -webkit-appearance: none;
-      outline: none;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at 20% 20%, #1e293b, #0b0f17);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      margin: 0;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    #fireworksCanvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 999;
-    }
-
-    /* Overlay styles */
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      animation: overlayFadeIn 0.4s ease-out;
-    }
-
-    .overlay.show {
-      display: flex;
-    }
-
-    @keyframes overlayFadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    .overlay-card {
-      background: linear-gradient(145deg, #1e293b, #0f172a);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      border-radius: 28px;
-      padding: 2rem 1.8rem;
-      text-align: center;
-      max-width: 380px;
-      width: 90%;
-      box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 40px rgba(251, 191, 36, 0.1);
-      animation: cardPop 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-    }
-
-    @keyframes cardPop {
-      from { transform: scale(0.8); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    .overlay-icon {
-      font-size: 3.5rem;
-      margin-bottom: 0.8rem;
-      animation: iconBounce 0.6s ease-in-out infinite alternate;
-    }
-
-    @keyframes iconBounce {
-      from { transform: translateY(0); }
-      to { transform: translateY(-12px); }
-    }
-
-    .overlay-title {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #fbbf24;
-      margin-bottom: 0.6rem;
-      letter-spacing: -0.5px;
-    }
-
-    .overlay-message {
-      color: #cbd5e1;
-      font-size: 0.95rem;
-      line-height: 1.6;
-      margin-bottom: 1.2rem;
-    }
-
-    .overlay-balance {
-      background: rgba(251, 191, 36, 0.1);
-      border: 1px solid rgba(251, 191, 36, 0.25);
-      border-radius: 16px;
-      padding: 1rem;
-      margin-bottom: 1.2rem;
-    }
-
-    .overlay-balance span {
-      color: #9ca3af;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .overlay-balance h3 {
-      color: #fbbf24;
-      font-size: 1.8rem;
-      font-weight: 800;
-      margin-top: 0.3rem;
-    }
-
-    .overlay-spins-left {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-bottom: 1.2rem;
-      color: #ef4444;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-
-    .overlay-close {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #9ca3af;
-      padding: 0.8rem 1.5rem;
-      border-radius: 14px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      width: 100%;
-    }
-
-    .overlay-close:hover {
-      border-color: rgba(255,255,255,0.4);
-      color: #fff;
-      background: rgba(255,255,255,0.05);
-    }
-
-    .container {
-      width: 100%;
-      max-width: 540px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 1;
-    }
-
-    .card {
-      background: rgba(18, 22, 30, 0.9);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 40px;
-      padding: 1.8rem 1.5rem 2rem;
-      box-shadow: 0 35px 70px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      position: relative;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 1.2rem;
-    }
-
-    .header h1 {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: -1.5px;
-      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 90%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.2rem;
-    }
-
-    .header p {
-      color: #94a3b8;
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
-
-    .prize-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.6rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .prize-item {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 0.7rem 0.8rem;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      backdrop-filter: blur(8px);
-      transition: all 0.3s;
-      cursor: default;
-    }
-
-    .prize-item i {
-      font-size: 1.2rem;
-      width: 24px;
-      text-align: center;
-      color: #cbd5e1;
-    }
-
-    .prize-item span {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #e2e8f0;
-      letter-spacing: -0.2px;
-    }
-
-    .prize-item.winner {
-      animation: winnerGlow 0.6s ease-in-out 3;
-      border-color: #fbbf24;
-      background: rgba(251, 191, 36, 0.2);
-    }
-
-    @keyframes winnerGlow {
-      0%, 100% { box-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
-      50% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.8); }
-    }
-
-    .wheel-area {
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 0.5rem 0 1.5rem;
-      filter: drop-shadow(0 20px 25px rgba(0, 0, 0, 0.6));
-    }
-
-    .pointer {
-      position: absolute;
-      top: -16px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 18px solid transparent;
-      border-right: 18px solid transparent;
-      border-top: 34px solid #fbbf24;
-      filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.7));
-      z-index: 20;
-      transition: border-top-color 0.2s;
-    }
-
-    .wheel {
-      width: 270px;
-      height: 270px;
-      border-radius: 50%;
-      position: relative;
-      background: conic-gradient(#fbbf24 0deg 30deg, #f97316 30deg 60deg, #06b6d4 60deg 90deg, #8b5cf6 90deg 120deg, #ec4899 120deg 150deg, #10b981 150deg 180deg, #fbbf24 180deg 210deg, #f97316 210deg 240deg, #06b6d4 240deg 270deg, #8b5cf6 270deg 300deg, #ec4899 300deg 330deg, #10b981 330deg 360deg);
-      border: 9px solid #1e293b;
-      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5), 0 20px 40px rgba(0, 0, 0, 0.7);
-      transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.15, 1.2);
-      will-change: transform;
-    }
-
-    .center {
-      position: absolute;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #f8fafc, #cbd5e1);
-      border: 6px solid #0f172a;
-      box-shadow: inset 0 -4px 6px rgba(0, 0, 0, 0.3), 0 10px 20px rgba(0, 0, 0, 0.6);
-      z-index: 15;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 1.1rem;
-      color: #0f172a;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 1.2rem;
-    }
-
-    .box {
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(10px);
-      border-radius: 18px;
-      padding: 0.7rem 0.4rem;
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      text-align: center;
-      transition: all 0.3s;
-    }
-
-    .box span {
-      color: #9ca3af;
-      font-size: 0.65rem;
-      font-weight: 500;
-      text-transform: uppercase;
-    }
-
-    .box h3 {
-      margin-top: 3px;
-      font-size: 1rem;
-      font-weight: 700;
-      color: #f1f5f9;
-      transition: all 0.3s;
-    }
-
-    .box.balance-increase h3 {
-      animation: balancePop 0.5s ease-out;
-    }
-
-    @keyframes balancePop {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.3); color: #4ade80; }
-      100% { transform: scale(1); }
-    }
-
-    .spins-remaining-box {
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.2);
-    }
-
-    .bet {
-      margin-bottom: 1.2rem;
-    }
-
-    .bet label {
-      display: block;
-      margin-bottom: 0.4rem;
-      color: #cbd5e1;
-      font-size: 0.85rem;
-    }
-
-    .bet-input-wrapper {
-      position: relative;
-    }
-
-    .bet input {
-      width: 100%;
-      padding: 0.8rem 3rem 0.8rem 1rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      background: rgba(15, 23, 42, 0.7);
-      backdrop-filter: blur(12px);
-      color: #fff;
-      font-size: 1rem;
-      outline: none;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-
-    .bet-currency {
-      position: absolute;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #9ca3af;
-      font-size: 0.85rem;
-      font-weight: 600;
-      pointer-events: none;
-    }
-
-    button {
-      width: 100%;
-      padding: 0.9rem;
-      border: none;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #fde047, #f59e0b);
-      color: #0f172a;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.25s;
-      box-shadow: 0 12px 25px rgba(251, 191, 36, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.3rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 18px 35px rgba(251, 191, 36, 0.5);
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      filter: grayscale(0.2);
-    }
-
-    .result-message {
-      text-align: center;
-      margin-top: 0.7rem;
-      font-weight: 600;
-      color: #facc15;
-      min-height: 22px;
-      font-size: 0.9rem;
-    }
-
-    .result-message.win {
-      animation: messageBounce 0.5s ease-out;
-    }
-
-    @keyframes messageBounce {
-      0% { transform: scale(0.8); opacity: 0; }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .footer {
-      text-align: center;
-      color: #7c8798;
-      margin-top: 0.8rem;
-      font-size: 0.75rem;
-    }
-
-    .top-controls {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    right: 1rem;
-    display: flex;
-    justify-content: space-between;
-    z-index: 2;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>የኢትዮጵያ ሎተሪ አገልግሎት • Lucky Spin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js">
+    </script>
+    <style>
+        :root {
+            --bg-primary: #0b0f17;
+            --bg-card: rgba(18, 22, 30, 0.92);
+            --gold: #fbbf24;
+            --gold-dark: #f59e0b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #9ca3af;
+            --danger: #ef4444;
+            --success: #10b981;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-gold: rgba(251, 191, 36, 0.3);
+        }
+        .consent-age-badge {
+    display: inline-block;
+    background: rgba(239, 68, 68, 0.15);
+    border: 2px solid #ef4444;
+    color: #ef4444;
+    font-size: 0.85rem;
+    font-weight: 800;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    margin-bottom: 0.8rem;
+    letter-spacing: 1px;
 }
 
-    .sound-toggle, .lang-toggle {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: #9ca3af;
-      transition: all 0.2s;
-      font-size: 0.85rem;
-      font-weight: 700;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none;
+        }
 
-    .sound-toggle:hover, .lang-toggle:hover {
-      color: #fbbf24;
-      border-color: #fbbf24;
-    }
+        button,
+        .center,
+        .prize-item,
+        .sound-toggle,
+        .lang-toggle {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-appearance: none;
+            outline: none;
+        }
 
-    .lang-toggle.active {
-      color: #fbbf24;
-      border-color: #fbbf24;
-      background: rgba(251, 191, 36, 0.15);
-    }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at 20% 20%, #1e293b, var(--bg-primary));
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            margin: 0;
+            position: relative;
+            overflow-x: hidden;
+        }
 
-    @media (max-width: 400px) {
-      .card { padding: 1.5rem 1rem; }
-      .wheel { width: 230px; height: 230px; }
-      .prize-item span { font-size: 0.7rem; }
-    }
-  </style>
+        #fireworksCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* ============ CONSENT OVERLAY ============ */
+        .consent-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .consent-overlay.hidden {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .consent-card {
+            background: linear-gradient(160deg, #1a1f2e, #0f1520);
+            border: 1px solid var(--border-subtle);
+            border-radius: 32px;
+            padding: 2.2rem 1.8rem;
+            text-align: center;
+            max-width: 440px;
+            width: 93%;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(251, 191, 36, 0.06);
+            animation: popIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            position: relative;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.85);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .consent-lang-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            z-index: 2;
+        }
+        .consent-lang-toggle:hover {
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+        .consent-lang-toggle.active {
+            color: var(--gold);
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.12);
+        }
+
+        .consent-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            animation: float 2.2s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .consent-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+
+        .consent-text {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+            text-align: left;
+            padding: 0 0.3rem;
+        }
+
+        .consent-checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .consent-checkbox-wrapper:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .consent-checkbox-wrapper input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: var(--gold);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .consent-checkbox-wrapper label {
+            color: #e2e8f0;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        .consent-agree-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #fde047, var(--gold-dark));
+            color: #0f172a;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            opacity: 0.5;
+            pointer-events: none;
+            transition: all 0.3s;
+            letter-spacing: 0.3px;
+        }
+        .consent-agree-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+            box-shadow: 0 12px 30px rgba(251, 191, 36, 0.4);
+        }
+        .consent-agree-btn.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 40px rgba(251, 191, 36, 0.55);
+        }
+
+        /* ============ SPIN LIMIT OVERLAY ============ */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .overlay.show {
+            display: flex;
+        }
+
+        .overlay-card {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid var(--border-gold);
+            border-radius: 28px;
+            padding: 2.2rem 1.8rem;
+            text-align: center;
+            max-width: 390px;
+            width: 90%;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(251, 191, 36, 0.1);
+            animation: popIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        .overlay-icon {
+            font-size: 3.5rem;
+            margin-bottom: 0.8rem;
+            animation: bounce 0.6s ease-in-out infinite alternate;
+        }
+        @keyframes bounce {
+            from {
+                transform: translateY(0);
+            }
+            to {
+                transform: translateY(-12px);
+            }
+        }
+
+        .overlay-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin-bottom: 0.6rem;
+            letter-spacing: -0.5px;
+        }
+        .overlay-message {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1.2rem;
+        }
+        .overlay-balance {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        .overlay-balance span {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .overlay-balance h3 {
+            color: var(--gold);
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-top: 0.3rem;
+        }
+        .overlay-spins-left {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
+            color: var(--danger);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .overlay-close {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-muted);
+            padding: 0.8rem 1.5rem;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .overlay-close:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* ============ MAIN GAME CARD ============ */
+        .container {
+            width: 100%;
+            max-width: 540px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 40px;
+            padding: 1.8rem 1.5rem 2rem;
+            box-shadow: 0 35px 70px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            position: relative;
+        }
+
+        .top-controls {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            right: 1rem;
+            display: flex;
+            justify-content: space-between;
+            z-index: 2;
+        }
+
+        .sound-toggle,
+        .lang-toggle {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        .sound-toggle:hover,
+        .lang-toggle:hover {
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+        .lang-toggle.active {
+            color: var(--gold);
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.15);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 1.2rem;
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 90%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.2rem;
+        }
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .prize-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            margin-bottom: 1.5rem;
+        }
+        .prize-item {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 0.7rem 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            backdrop-filter: blur(8px);
+            transition: all 0.3s;
+            cursor: default;
+        }
+        .prize-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        .prize-item i {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .prize-item span {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            letter-spacing: -0.2px;
+        }
+        .prize-item.winner {
+            animation: winnerGlow 0.6s ease-in-out 3;
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.2);
+        }
+        @keyframes winnerGlow {
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(251, 191, 36, 0.8);
+            }
+        }
+
+        .wheel-area {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0.5rem 0 1.5rem;
+            filter: drop-shadow(0 20px 25px rgba(0, 0, 0, 0.6));
+        }
+        .pointer {
+            position: absolute;
+            top: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 34px solid var(--gold);
+            filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.7));
+            z-index: 20;
+            transition: border-top-color 0.2s;
+        }
+        .wheel {
+            width: 270px;
+            height: 270px;
+            border-radius: 50%;
+            position: relative;
+            background: conic-gradient(#fbbf24 0deg 30deg, #f97316 30deg 60deg, #06b6d4 60deg 90deg, #8b5cf6 90deg 120deg, #ec4899 120deg 150deg, #10b981 150deg 180deg, #fbbf24 180deg 210deg, #f97316 210deg 240deg, #06b6d4 240deg 270deg, #8b5cf6 270deg 300deg, #ec4899 300deg 330deg, #10b981 330deg 360deg);
+            border: 9px solid #1e293b;
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5), 0 20px 40px rgba(0, 0, 0, 0.7);
+            transition: transform 4.2s cubic-bezier(0.2, 0.02, 0.15, 1);
+            will-change: transform;
+        }
+        .center {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #f8fafc, #cbd5e1);
+            border: 6px solid #0f172a;
+            box-shadow: inset 0 -4px 6px rgba(0, 0, 0, 0.3), 0 10px 20px rgba(0, 0, 0, 0.6);
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #0f172a;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .center:active {
+            transform: scale(0.9);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 1.2rem;
+        }
+        .box {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 18px;
+            padding: 0.7rem 0.4rem;
+            border: 1px solid var(--border-subtle);
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .box span {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .box h3 {
+            margin-top: 3px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+        .box.balance-increase h3 {
+            animation: balancePop 0.5s ease-out;
+        }
+        @keyframes balancePop {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.3);
+                color: #4ade80;
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        .spins-remaining-box {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .bet {
+            margin-bottom: 1.2rem;
+        }
+        .bet label {
+            display: block;
+            margin-bottom: 0.4rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .bet-input-wrapper {
+            position: relative;
+        }
+        .bet input {
+            width: 100%;
+            padding: 0.8rem 3rem 0.8rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .bet-currency {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .spin-btn {
+            width: 100%;
+            padding: 0.9rem;
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #fde047, var(--gold-dark));
+            color: #0f172a;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 12px 25px rgba(251, 191, 36, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .spin-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 35px rgba(251, 191, 36, 0.5);
+        }
+        .spin-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.2);
+        }
+
+        .result-message {
+            text-align: center;
+            margin-top: 0.7rem;
+            font-weight: 600;
+            color: var(--gold);
+            min-height: 22px;
+            font-size: 0.9rem;
+        }
+        .result-message.win {
+            animation: messageBounce 0.5s ease-out;
+        }
+        @keyframes messageBounce {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            color: #7c8798;
+            margin-top: 0.8rem;
+            font-size: 0.75rem;
+        }
+
+        @media (max-width: 400px) {
+            .card {
+                padding: 1.5rem 1rem;
+            }
+            .wheel {
+                width: 230px;
+                height: 230px;
+            }
+            .prize-item span {
+                font-size: 0.7rem;
+            }
+            .consent-card {
+                padding: 1.8rem 1.3rem;
+            }
+        }
+    </style>
 </head>
 <body>
 
-  <canvas id="fireworksCanvas"></canvas>
-
-  <!-- Spins Limit Overlay -->
-  <div class="overlay" id="spinLimitOverlay">
-    <div class="overlay-card">
-      <div class="overlay-icon">💰</div>
-      <div class="overlay-title" data-en="Spins Finished!" data-am="እሽክርክሪት አልቋል!">Spins Finished!</div>
-      <div class="overlay-message" data-en="You've used all your free spins. Withdraw your winnings to continue playing and unlock more spins!" data-am="ሁሉንም የነጻ እሽክርክሪትዎን ተጠቅመዋል። ማግኘትዎን ለመቀጠል አሸናፊነትዎን ያውጡ!">You've used all your free spins. Withdraw your winnings to continue playing and unlock more spins!</div>
-      <div class="overlay-balance">
-        <span data-en="Your Balance" data-am="የእርስዎ ሂሳብ">Your Balance</span>
-        <h3 id="overlayBalance">0 ETB</h3>
-      </div>
-      <div class="overlay-spins-left">
-        <i class="fas fa-exclamation-circle"></i>
-        <span data-en="0 spins remaining" data-am="0 እሽክርክሪት ቀርቷል">0 spins remaining</span>
-      </div>
-      <button class="overlay-close" id="overlayCloseBtn" data-en="Got it" data-am="ተረድቻለሁ">Got it</button>
+    <!-- ============ CONSENT OVERLAY ============ -->
+    <div class="consent-overlay" id="consentOverlay">
+        <div class="consent-card">
+            <div class="consent-lang-toggle active" id="consentLangToggle" title="Switch Language">EN</div>
+         <div class="consent-icon">🎲</div>
+<div class="consent-age-badge">18+</div>
+<div class="consent-title" data-en="Before You Play" data-am="ከመጫወትዎ በፊት">ከመጫወትዎ በፊት</div>
+            <div class="consent-text" data-en="This is a game of chance by the Ethiopian Lottery Service (የኢትዮጵያ ሎተሪ አገልግሎት). Prizes shown on the wheel are for entertainment purposes. Actual winnings depend on the spin outcome. By playing, you agree to our terms and conditions. Please play responsibly." data-am="ይህ የኢትዮጵያ ሎተሪ አገልግሎት የእድል ጨዋታ ነው። በመንኮራኩሩ ላይ የሚታዩት ሽልማቶች ለመዝናኛ ዓላማ ናቸው። ትክክለኛው አሸናፊነት በእሽክርክሪት ውጤት ላይ ይወሰናል። በመጫወትዎ ውሎቻችንን ይቀበላሉ። እባክዎ በኃላፊነት ይጫወቱ።">ይህ የኢትዮጵያ ሎተሪ አገልግሎት የእድል ጨዋታ ነው። በመንኮራኩሩ ላይ የሚታዩት ሽልማቶች ለመዝናኛ ዓላማ ናቸው። ትክክለኛው አሸናፊነት በእሽክርክሪት ውጤት ላይ ይወሰናል። በመጫወትዎ ውሎቻችንን ይቀበላሉ። እባክዎ በኃላፊነት ይጫወቱ።</div>
+            <div class="consent-checkbox-wrapper" id="consentCheckboxWrapper">
+                <input type="checkbox" id="consentCheckbox">
+                <label for="consentCheckbox" data-en="I understand and agree to the terms" data-am="ተረድቻለሁ እና ውሎቹን ተቀብያለሁ">ተረድቻለሁ እና ውሎቹን ተቀብያለሁ</label>
+            </div>
+            <button class="consent-agree-btn" id="consentAgreeBtn" data-en="AGREE & PLAY" data-am="ተስማምቻለሁ • ጫወት">ተስማምቻለሁ • ጫወት</button>
+        </div>
     </div>
-  </div>
 
-  <div class="container">
-    <div class="card">
-      <div class="top-controls">
-    <div class="lang-toggle" id="langToggle" title="Switch Language">አማ</div>
-    <div class="sound-toggle" id="soundToggle" title="Sound effects">
-        <i class="fas fa-volume-up"></i>
+    <canvas id="fireworksCanvas"></canvas>
+
+    <!-- ============ SPIN LIMIT OVERLAY ============ -->
+    <div class="overlay" id="spinLimitOverlay">
+        <div class="overlay-card">
+            <div class="overlay-icon">💰</div>
+            <div class="overlay-title" data-en="Spins Finished!" data-am="እሽክርክሪት አልቋል!">እሽክርክሪት አልቋል!</div>
+            <div class="overlay-message" data-en="You've used all your free spins. Withdraw your winnings to continue playing and unlock more spins!" data-am="ሁሉንም የነጻ እሽክርክሪትዎን ተጠቅመዋል። ማግኘትዎን ለመቀጠል አሸናፊነትዎን ያውጡ!">ሁሉንም የነጻ እሽክርክሪትዎን ተጠቅመዋል። ማግኘትዎን ለመቀጠል አሸናፊነትዎን ያውጡ!</div>
+            <div class="overlay-balance">
+                <span data-en="Your Balance" data-am="የእርስዎ ሂሳብ">የእርስዎ ሂሳብ</span>
+                <h3 id="overlayBalance">0 ETB</h3>
+            </div>
+            <div class="overlay-spins-left">
+                <i class="fas fa-exclamation-circle"></i>
+                <span data-en="0 spins remaining" data-am="0 እሽክርክሪት ቀርቷል">0 እሽክርክሪት ቀርቷል</span>
+            </div>
+            <button class="overlay-close" id="overlayCloseBtn" data-en="Got it" data-am="ተረድቻለሁ">ተረድቻለሁ</button>
+        </div>
     </div>
-</div>
 
-      <div class="header">
-        <h1 data-en="Lucky Wheel" data-am="እድለኛ መንኮራኩር">Lucky Wheel</h1>
-        <p data-en="12 amazing prizes up for grabs" data-am="12 አስደናቂ ሽልማቶች ይጠብቁዎታል">12 amazing prizes up for grabs</p>
-      </div>
+    <!-- ============ MAIN GAME ============ -->
+    <div class="container">
+        <div class="card">
+            <div class="top-controls">
+                <div class="lang-toggle active" id="langToggle" title="ቋንቋ ቀይር">EN</div>
+                <div class="sound-toggle" id="soundToggle" title="ድምፅ">
+                    <i class="fas fa-volume-up"></i>
+                </div>
+            </div>
 
-      <div class="prize-grid" id="prizeGrid"></div>
+            <div class="header">
+                <h1 data-en="Lucky Wheel" data-am="እድለኛ መንኮራኩር">እድለኛ መንኮራኩር</h1>
+                <p data-en="12 amazing prizes up for grabs" data-am="12 አስደናቂ ሽልማቶች ይጠብቁዎታል">12 አስደናቂ ሽልማቶች ይጠብቁዎታል</p>
+            </div>
 
-      <div class="wheel-area">
-        <div class="pointer" id="pointer"></div>
-        <div class="wheel" id="wheel"></div>
-        <div class="center" id="centerDisplay" title="Click to spin">🎰</div>
-      </div>
+            <div class="prize-grid" id="prizeGrid"></div>
 
-      <div class="stats">
-        <div class="box" id="balanceBox">
-          <span data-en="Balance" data-am="ሂሳብ">Balance</span>
-          <h3 id="balanceDisplay">0 ETB</h3>
+            <div class="wheel-area">
+                <div class="pointer" id="pointer"></div>
+                <div class="wheel" id="wheel"></div>
+                <div class="center" id="centerDisplay" title="ለማሽከርከር ይጫኑ">🎰</div>
+            </div>
+
+            <div class="stats">
+                <div class="box" id="balanceBox">
+                    <span data-en="Balance" data-am="ሂሳብ">ሂሳብ</span>
+                    <h3 id="balanceDisplay">0 ETB</h3>
+                </div>
+                <div class="box">
+                    <span data-en="Cost/Spin" data-am="ዋጋ/ስፒን">ዋጋ/ስፒን</span>
+                    <h3 id="costDisplay">10 ETB</h3>
+                </div>
+                <div class="box spins-remaining-box">
+                    <span data-en="Spins Left" data-am="የቀሩ ስፒኖች">የቀሩ ስፒኖች</span>
+                    <h3 id="spinsRemainingDisplay">3</h3>
+                </div>
+            </div>
+
+            <div class="bet">
+                <label data-en="Bet Amount (fixed 10 ETB per spin)" data-am="የውርርድ መጠን (ቋሚ 10 ብር በአንድ ስፒን)">የውርርድ መጠን (ቋሚ 10 ብር በአንድ ስፒን)</label>
+                <div class="bet-input-wrapper">
+                    <input type="number" id="betAmount" value="10" disabled readonly>
+                    <span class="bet-currency">ETB</span>
+                </div>
+            </div>
+
+            <button class="spin-btn" id="spinButton">
+                <span>⚡</span> <span data-en="SPIN NOW" data-am="አሁን አሽከርክር">አሁን አሽከርክር</span> <span>⚡</span>
+            </button>
+
+            <div class="result-message" id="resultMessage"></div>
+            <div class="footer" data-en="🍀 Ethiopian Lottery Service • 3 spins max" data-am="🍀 የኢትዮጵያ ሎተሪ አገልግሎት • ከፍተኛ 3 ስፒኖች">🍀 የኢትዮጵያ ሎተሪ አገልግሎት • ከፍተኛ 3 ስፒኖች</div>
         </div>
-        <div class="box">
-          <span data-en="Cost/Spin" data-am="ዋጋ/ስፒን">Cost/Spin</span>
-          <h3 id="costDisplay">10 ETB</h3>
-        </div>
-        <div class="box spins-remaining-box">
-          <span data-en="Spins Left" data-am="የቀሩ ስፒኖች">Spins Left</span>
-          <h3 id="spinsRemainingDisplay">3</h3>
-        </div>
-      </div>
-
-      <div class="bet">
-        <label data-en="Bet Amount (fixed 10 ETB per spin)" data-am="የውርርድ መጠን (ቋሚ 10 ብር በአንድ ስፒን)">Bet Amount (fixed 10 ETB per spin)</label>
-        <div class="bet-input-wrapper">
-          <input type="number" id="betAmount" value="10" disabled readonly>
-          <span class="bet-currency">ETB</span>
-        </div>
-      </div>
-
-      <button id="spinButton">
-        <span>⚡</span> <span data-en="SPIN NOW" data-am="አሁን አሽከርክር">SPIN NOW</span> <span>⚡</span>
-      </button>
-
-      <div class="result-message" id="resultMessage"></div>
-      <div class="footer" data-en="🍀 3 spins max • First spin: Try Again" data-am="🍀 ከፍተኛ 3 ስፒኖች • የመጀመሪያ ስፒን: እንደገና ይሞክሩ">🍀 3 spins max • First spin: Try Again</div>
     </div>
-  </div>
 
-  <script>
-    (function() {
-      // ---- TRANSLATIONS ----
-      const translations = {
-        en: {
-          spinNow: "SPIN NOW",
-          noSpinsLeft: "NO SPINS LEFT",
-          tryAgainMsg: "😕 Try Again – Your next spin wins real prizes!",
-          congrats: "🎉 Congrats! You won",
-          cosmetic: "🎁 Cosmetic prize!",
-          insufficient: "❌ Insufficient balance. Add funds to continue.",
-          error: "⚠️ Error. Refunded.",
-          overlayTitle: "Spins Finished!",
-          overlayMsg: "You've used all your free spins. Withdraw your winnings to continue playing and unlock more spins!",
-          overlayBalance: "Your Balance",
-          overlaySpins: "0 spins remaining",
-          overlayClose: "Got it"
-        },
-        am: {
-          spinNow: "አሁን አሽከርክር",
-          noSpinsLeft: "ምንም ስፒን የለም",
-          tryAgainMsg: "😕 እንደገና ይሞክሩ – የሚቀጥለው ስፒንዎ እውነተኛ ሽልማት ያሸንፋል!",
-          congrats: "🎉 እንኳን ደስ አለዎት! አሸንፈዋል",
-          cosmetic: "🎁 የመዋቢያ ሽልማት!",
-          insufficient: "❌ በቂ ሂሳብ የለም። ለመቀጠል ገንዘብ ያክሉ።",
-          error: "⚠️ ስህተት። ተመላሽ ተደርጓል።",
-          overlayTitle: "እሽክርክሪት አልቋል!",
-          overlayMsg: "ሁሉንም የነጻ እሽክርክሪትዎን ተጠቅመዋል። ማግኘትዎን ለመቀጠል አሸናፊነትዎን ያውጡ!",
-          overlayBalance: "የእርስዎ ሂሳብ",
-          overlaySpins: "0 እሽክርክሪት ቀርቷል",
-          overlayClose: "ተረድቻለሁ"
-        }
-      };
+    <script>
+        (function() {
+            // ============ GLOBAL STATE ============
+            let currentLang = 'am';
 
-      let currentLang = 'en';
+            // ============ TRANSLATIONS ============
+            const translations = {
+                en: {
+                    spinNow: "SPIN NOW",
+                    noSpinsLeft: "NO SPINS LEFT",
+                    tryAgainMsg: "😕 Try Again – Your next spin wins real prizes!",
+                    congrats: "🎉 Congrats! You won",
+                    cosmetic: "🎁 Cosmetic prize!",
+                    insufficient: "❌ Insufficient balance. Add funds to continue.",
+                    error: "⚠️ Error. Refunded."
+                },
+                am: {
+                    spinNow: "አሁን አሽከርክር",
+                    noSpinsLeft: "ምንም ስፒን የለም",
+                    tryAgainMsg: "😕 እንደገና ይሞክሩ – የሚቀጥለው ስፒንዎ እውነተኛ ሽልማት ያሸንፋል!",
+                    congrats: "🎉 እንኳን ደስ አለዎት! አሸንፈዋል",
+                    cosmetic: "🎁 የመዋቢያ ሽልማት!",
+                    insufficient: "❌ በቂ ሂሳብ የለም። ለመቀጠል ገንዘብ ያክሉ።",
+                    error: "⚠️ ስህተት። ተመላሽ ተደርጓል።"
+                }
+            };
 
-      const SLOTS = [
-        { slot: 1, item: "250 Birr", itemAm: "250 ብር", tier: "Winnable Cash", probability: 50.0, icon: "fa-gift" },
-        { slot: 2, item: "Free Ride Ticket", itemAm: "የነጻ ጉዞ ቲኬት", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-ticket" },
-        { slot: 3, item: "500 Birr", itemAm: "500 ብር", tier: "Winnable Cash", probability: 30.0, icon: "fa-gift" },
-        { slot: 4, item: "Smart TV", itemAm: "ስማርት ቲቪ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-tv" },
-        { slot: 5, item: "1,000 Birr", itemAm: "1,000 ብር", tier: "Winnable Cash", probability: 14.5, icon: "fa-gift" },
-        { slot: 6, item: "Galaxy A55", itemAm: "ጋላክሲ A55", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-mobile-alt" },
-        { slot: 7, item: "2,500 Birr", itemAm: "2,500 ብር", tier: "Winnable Cash", probability: 5.0, icon: "fa-gift" },
-        { slot: 8, item: "Dubai Trip", itemAm: "የዱባይ ጉዞ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-plane" },
-        { slot: 9, item: "5,000 Birr", itemAm: "5,000 ብር", tier: "Winnable Cash", probability: 0.5, icon: "fa-gift" },
-        { slot: 10, item: "Refrigerator", itemAm: "ማቀዝቀዣ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-temperature-low" },
-        { slot: 11, item: "Earbuds", itemAm: "ኢርባድስ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-headphones" },
-        { slot: 12, item: "Try Again", itemAm: "እንደገና ይሞክሩ", tier: "Cosmetic Bait", probability: 0.0, icon: "fa-rotate-right" }
-      ];
+            // ============ PRIZE DATA ============
+            const SLOTS = [
+                { slot: 1, item: "250 Birr", itemAm: "250 ብር", tier: "Winnable Cash", probability: 50.0,
+                icon: "fa-gift" },
+                { slot: 2, item: "Free Ride Ticket", itemAm: "የነጻ ጉዞ ቲኬት", tier: "Cosmetic Bait", probability: 0.0,
+                    icon: "fa-ticket" },
+                { slot: 3, item: "500 Birr", itemAm: "500 ብር", tier: "Winnable Cash", probability: 30.0,
+                icon: "fa-gift" },
+                { slot: 4, item: "Smart TV", itemAm: "ስማርት ቲቪ", tier: "Cosmetic Bait", probability: 0.0,
+                icon: "fa-tv" },
+                { slot: 5, item: "1,000 Birr", itemAm: "1,000 ብር", tier: "Winnable Cash", probability: 14.5,
+                    icon: "fa-gift" },
+                { slot: 6, item: "Galaxy A55", itemAm: "ጋላክሲ A55", tier: "Cosmetic Bait", probability: 0.0,
+                    icon: "fa-mobile-alt" },
+                { slot: 7, item: "2,500 Birr", itemAm: "2,500 ብር", tier: "Winnable Cash", probability: 5.0,
+                icon: "fa-gift" },
+                { slot: 8, item: "Dubai Trip", itemAm: "የዱባይ ጉዞ", tier: "Cosmetic Bait", probability: 0.0,
+                icon: "fa-plane" },
+                { slot: 9, item: "5,000 Birr", itemAm: "5,000 ብር", tier: "Winnable Cash", probability: 0.5,
+                icon: "fa-gift" },
+                { slot: 10, item: "Refrigerator", itemAm: "ማቀዝቀዣ", tier: "Cosmetic Bait", probability: 0.0,
+                    icon: "fa-temperature-low" },
+                { slot: 11, item: "Earbuds", itemAm: "ኢርባድስ", tier: "Cosmetic Bait", probability: 0.0,
+                    icon: "fa-headphones" },
+                { slot: 12, item: "Try Again", itemAm: "እንደገና ይሞክሩ", tier: "Cosmetic Bait", probability: 0.0,
+                    icon: "fa-rotate-right" }
+            ];
 
-      const STATE = {
-        balance: 0,
-        spinCost: 10,
-        freeSpins: 5,
-        isSpinning: false,
-        currentRotation: 0,
-        soundEnabled: true,
-        fireworks: null,
-        spinCount: 0,
-        forcedTryAgain: true,
-        maxSpins: 3,
-        spinsRemaining: 3
-      };
+            // ============ GAME STATE ============
+            const STATE = {
+                balance: 0,
+                spinCost: 10,
+                isSpinning: false,
+                currentRotation: 0,
+                soundEnabled: true,
+                fireworks: null,
+                spinCount: 0,
+                forcedTryAgain: true,
+                maxSpins: 3,
+                spinsRemaining: 3
+            };
 
-      const wheelEl = document.getElementById('wheel');
-      const prizeGrid = document.getElementById('prizeGrid');
-      const balanceDisplay = document.getElementById('balanceDisplay');
-      const balanceBox = document.getElementById('balanceBox');
-      const costDisplay = document.getElementById('costDisplay');
-      const spinsRemainingDisplay = document.getElementById('spinsRemainingDisplay');
-      const betInput = document.getElementById('betAmount');
-      const spinButton = document.getElementById('spinButton');
-      const resultMessageEl = document.getElementById('resultMessage');
-      const centerDisplay = document.getElementById('centerDisplay');
-      const pointerEl = document.getElementById('pointer');
-      const soundToggle = document.getElementById('soundToggle');
-      const langToggle = document.getElementById('langToggle');
-      const fireworksCanvas = document.getElementById('fireworksCanvas');
-      const spinLimitOverlay = document.getElementById('spinLimitOverlay');
-      const overlayBalance = document.getElementById('overlayBalance');
-      const overlayCloseBtn = document.getElementById('overlayCloseBtn');
+            // ============ DOM ELEMENTS ============
+            const $ = (id) => document.getElementById(id);
 
-      function t(key) {
-        return translations[currentLang][key] || key;
-      }
+            const wheelEl = $('wheel');
+            const prizeGrid = $('prizeGrid');
+            const balanceDisplay = $('balanceDisplay');
+            const balanceBox = $('balanceBox');
+            const costDisplay = $('costDisplay');
+            const spinsRemainingDisplay = $('spinsRemainingDisplay');
+            const betInput = $('betAmount');
+            const spinButton = $('spinButton');
+            const resultMessageEl = $('resultMessage');
+            const centerDisplay = $('centerDisplay');
+            const pointerEl = $('pointer');
+            const soundToggle = $('soundToggle');
+            const langToggle = $('langToggle');
+            const fireworksCanvas = $('fireworksCanvas');
+            const spinLimitOverlay = $('spinLimitOverlay');
+            const overlayBalance = $('overlayBalance');
+            const overlayCloseBtn = $('overlayCloseBtn');
+            const consentOverlay = $('consentOverlay');
+            const consentCheckbox = $('consentCheckbox');
+            const consentAgreeBtn = $('consentAgreeBtn');
+            const consentCheckboxWrapper = $('consentCheckboxWrapper');
+            const consentLangToggle = $('consentLangToggle');
 
-      function updateLanguage() {
-        // Update all data-en/data-am elements
-        document.querySelectorAll('[data-en][data-am]').forEach(el => {
-          el.textContent = el.getAttribute(`data-${currentLang}`);
-        });
-        // Update prize grid
-        renderPrizeGrid();
-        // Update spin button
-        if (STATE.spinsRemaining <= 0) {
-          spinButton.innerHTML = `<span>⚠️</span> ${t('noSpinsLeft')} <span>⚠️</span>`;
-        } else {
-          spinButton.innerHTML = `<span>⚡</span> ${t('spinNow')} <span>⚡</span>`;
-        }
-        // Update lang toggle
-        langToggle.textContent = currentLang === 'en' ? 'አማ' : 'EN';
-        langToggle.classList.toggle('active', currentLang === 'am');
-      }
+            // ============ HELPER FUNCTIONS ============
+            const t = (key) => translations[currentLang][key] || key;
 
-      class FireworksEngine {
-        constructor(canvas) {
-          this.canvas = canvas;
-          this.ctx = canvas.getContext('2d');
-          this.particles = [];
-          this.animationId = null;
-          this.resize();
-          window.addEventListener('resize', () => this.resize());
-        }
-        resize() {
-          this.canvas.width = window.innerWidth;
-          this.canvas.height = window.innerHeight;
-        }
-        createFirework(x, y) {
-          const colors = ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981', '#ec4899', '#f97316', '#84cc16', '#6366f1'];
-          for (let i = 0; i < 80; i++) {
-            const angle = (Math.PI * 2 * i) / 80;
-            const speed = 2 + Math.random() * 6;
-            this.particles.push({
-              x, y,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              life: 1,
-              decay: 0.01 + Math.random() * 0.02,
-              color: colors[Math.floor(Math.random() * colors.length)],
-              size: 2 + Math.random() * 3,
+            function formatBalance(amount) {
+                return amount.toLocaleString('en-US') + ' ETB';
+            }
+
+            // ============ LANGUAGE MANAGEMENT ============
+            function updateAllTranslations() {
+                document.querySelectorAll('[data-en][data-am]').forEach(el => {
+                    el.textContent = el.getAttribute(`data-${currentLang}`);
+                });
+                renderPrizeGrid();
+                updateSpinButtonText();
+                updateToggleButtons();
+            }
+
+            function updateConsentTranslations() {
+                document.querySelectorAll('.consent-card [data-en][data-am]').forEach(el => {
+                    el.textContent = el.getAttribute(`data-${currentLang}`);
+                });
+                consentLangToggle.textContent = currentLang === 'en' ? 'አማ' : 'EN';
+                consentLangToggle.classList.toggle('active', currentLang === 'am');
+            }
+
+            function updateToggleButtons() {
+                langToggle.textContent = currentLang === 'en' ? 'አማ' : 'EN';
+                langToggle.classList.toggle('active', currentLang === 'am');
+            }
+
+            function switchLanguage() {
+                currentLang = currentLang === 'en' ? 'am' : 'en';
+                updateAllTranslations();
+                updateConsentTranslations();
+            }
+
+            // ============ CONSENT OVERLAY LOGIC ============
+            consentCheckbox.addEventListener('change', () => {
+                consentAgreeBtn.classList.toggle('active', consentCheckbox.checked);
             });
-          }
-          if (!this.animationId) this.animate();
-        }
-        launchFireworks() {
-          for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
-              this.createFirework(Math.random() * this.canvas.width, Math.random() * this.canvas.height * 0.6);
-            }, i * 200);
-          }
-        }
-        animate() {
-          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-          this.particles = this.particles.filter(p => {
-            p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= p.decay;
-            if (p.life <= 0) return false;
-            this.ctx.save();
-            this.ctx.globalAlpha = p.life;
-            this.ctx.fillStyle = p.color;
-            this.ctx.beginPath();
-            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.restore();
-            return true;
-          });
-          this.animationId = this.particles.length > 0 ? requestAnimationFrame(() => this.animate()) : null;
-        }
-      }
 
-      const AudioEngine = {
-        ctx: null,
-        init() {
-          try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { STATE.soundEnabled = false; }
-        },
-        playTick() {
-          if (!STATE.soundEnabled || !this.ctx) return;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.connect(gain); gain.connect(this.ctx.destination);
-          osc.frequency.value = 800;
-          gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
-          osc.start(); osc.stop(this.ctx.currentTime + 0.1);
-        },
-        playWin() {
-          if (!STATE.soundEnabled || !this.ctx) return;
-          [523, 659, 784, 1047].forEach((freq, i) => {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.connect(gain); gain.connect(this.ctx.destination);
-            osc.type = 'triangle'; osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.1);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.1 + 0.2);
-            osc.start(this.ctx.currentTime + i * 0.1);
-            osc.stop(this.ctx.currentTime + i * 0.1 + 0.2);
-          });
-        },
-        playLose() {
-          if (!STATE.soundEnabled || !this.ctx) return;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.connect(gain); gain.connect(this.ctx.destination);
-          osc.frequency.value = 300;
-          gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-          osc.start(); osc.stop(this.ctx.currentTime + 0.3);
-        }
-      };
+            consentCheckboxWrapper.addEventListener('click', (e) => {
+                if (e.target !== consentCheckbox) {
+                    consentCheckbox.checked = !consentCheckbox.checked;
+                    consentCheckbox.dispatchEvent(new Event('change'));
+                }
+            });
 
-      function renderPrizeGrid() {
-        prizeGrid.innerHTML = '';
-        SLOTS.forEach(slot => {
-          const div = document.createElement('div');
-          div.className = 'prize-item';
-          div.setAttribute('data-slot', slot.slot);
-          const itemName = currentLang === 'am' && slot.itemAm ? slot.itemAm : slot.item;
-          div.innerHTML = `<i class="fas ${slot.icon}"></i><span>${itemName}</span>`;
-          prizeGrid.appendChild(div);
-        });
-      }
+            consentAgreeBtn.addEventListener('click', () => {
+                if (consentCheckbox.checked) {
+                    consentOverlay.classList.add('hidden');
+                }
+            });
 
-      function highlightWinningPrize(slotNumber) {
-        document.querySelectorAll('.prize-item').forEach(el => el.classList.remove('winner'));
-        const winner = document.querySelector(`.prize-item[data-slot="${slotNumber}"]`);
-        if (winner) { winner.classList.add('winner'); setTimeout(() => winner.classList.remove('winner'), 2000); }
-      }
+            consentLangToggle.addEventListener('click', switchLanguage);
 
-      function formatBalance(amount) {
-        return amount.toLocaleString('en-US') + ' ETB';
-      }
+            // ============ FIREWORKS ENGINE ============
+            class FireworksEngine {
+                constructor(canvas) {
+                    this.canvas = canvas;
+                    this.ctx = canvas.getContext('2d');
+                    this.particles = [];
+                    this.animationId = null;
+                    this.resize();
+                    window.addEventListener('resize', () => this.resize());
+                }
+                resize() {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                }
+                createFirework(x, y) {
+                    const colors = ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981', '#ec4899',
+                        '#f97316', '#84cc16', '#6366f1'
+                    ];
+                    for (let i = 0; i < 80; i++) {
+                        const angle = (Math.PI * 2 * i) / 80;
+                        const speed = 2 + Math.random() * 6;
+                        this.particles.push({
+                            x,
+                            y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 1,
+                            decay: 0.01 + Math.random() * 0.02,
+                            color: colors[Math.floor(Math.random() * colors.length)],
+                            size: 2 + Math.random() * 3,
+                        });
+                    }
+                    if (!this.animationId) this.animate();
+                }
+                launchFireworks() {
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => {
+                            this.createFirework(Math.random() * this.canvas.width, Math.random() * this.canvas
+                                .height * 0.6);
+                        }, i * 200);
+                    }
+                }
+                animate() {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.particles = this.particles.filter(p => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vy += 0.05;
+                        p.life -= p.decay;
+                        if (p.life <= 0) return false;
+                        this.ctx.save();
+                        this.ctx.globalAlpha = p.life;
+                        this.ctx.fillStyle = p.color;
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.restore();
+                        return true;
+                    });
+                    this.animationId = this.particles.length > 0 ? requestAnimationFrame(() => this.animate()) :
+                        null;
+                }
+            }
 
-      function showSpinLimitOverlay() {
-        overlayBalance.textContent = formatBalance(STATE.balance);
-        updateLanguage();
-        spinLimitOverlay.classList.add('show');
-      }
+            // ============ AUDIO ENGINE ============
+            const AudioEngine = {
+                ctx: null,
+                init() {
+                    try {
+                        this.ctx = new(window.AudioContext || window.webkitAudioContext)();
+                    } catch (e) {
+                        STATE.soundEnabled = false;
+                    }
+                },
+                playTick() {
+                    if (!STATE.soundEnabled || !this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.frequency.value = 800;
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                },
+                playWin() {
+                    if (!STATE.soundEnabled || !this.ctx) return;
+                    [523, 659, 784, 1047].forEach((freq, i) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.type = 'triangle';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.1 + 0.2);
+                        osc.start(this.ctx.currentTime + i * 0.1);
+                        osc.stop(this.ctx.currentTime + i * 0.1 + 0.2);
+                    });
+                },
+                playLose() {
+                    if (!STATE.soundEnabled || !this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.frequency.value = 300;
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.3);
+                }
+            };
 
-      function refreshUI() {
-        balanceDisplay.textContent = formatBalance(STATE.balance);
-        costDisplay.textContent = formatBalance(STATE.spinCost);
-        spinsRemainingDisplay.textContent = STATE.spinsRemaining;
+            // ============ UI RENDERING ============
+            function renderPrizeGrid() {
+                prizeGrid.innerHTML = '';
+                SLOTS.forEach(slot => {
+                    const div = document.createElement('div');
+                    div.className = 'prize-item';
+                    div.setAttribute('data-slot', slot.slot);
+                    const itemName = currentLang === 'am' && slot.itemAm ? slot.itemAm : slot.item;
+                    div.innerHTML = `<i class="fas ${slot.icon}"></i><span>${itemName}</span>`;
+                    prizeGrid.appendChild(div);
+                });
+            }
 
-        if (STATE.spinsRemaining <= 0) {
-          spinButton.disabled = true;
-          spinButton.innerHTML = `<span>⚠️</span> ${t('noSpinsLeft')} <span>⚠️</span>`;
-        } else {
-          spinButton.disabled = STATE.isSpinning;
-          spinButton.innerHTML = `<span>⚡</span> ${t('spinNow')} <span>⚡</span>`;
-        }
-      }
+            function highlightWinningPrize(slotNumber) {
+                document.querySelectorAll('.prize-item').forEach(el => el.classList.remove('winner'));
+                const winner = document.querySelector(`.prize-item[data-slot="${slotNumber}"]`);
+                if (winner) {
+                    winner.classList.add('winner');
+                    setTimeout(() => winner.classList.remove('winner'), 2000);
+                }
+            }
 
-      function animateBalanceIncrease() {
-        balanceBox.classList.add('balance-increase');
-        setTimeout(() => balanceBox.classList.remove('balance-increase'), 600);
-      }
+            function updateSpinButtonText() {
+                if (STATE.spinsRemaining <= 0) {
+                    spinButton.innerHTML = `<span>⚠️</span> ${t('noSpinsLeft')} <span>⚠️</span>`;
+                } else {
+                    spinButton.innerHTML = `<span>⚡</span> ${t('spinNow')} <span>⚡</span>`;
+                }
+            }
 
-      function selectWinningSlot() {
-        STATE.spinCount++;
-        if (STATE.forcedTryAgain && STATE.spinCount === 1) {
-          return SLOTS.find(s => s.slot === 12);
-        }
-        const cashSlots = SLOTS.filter(s => s.probability > 0);
-        if (cashSlots.length === 0) return SLOTS[11];
-        const totalProb = cashSlots.reduce((sum, s) => sum + s.probability, 0);
-        let random = Math.random() * totalProb;
-        for (let slot of cashSlots) {
-          random -= slot.probability;
-          if (random <= 0) return slot;
-        }
-        return cashSlots[cashSlots.length - 1];
-      }
+            function refreshUI() {
+                balanceDisplay.textContent = formatBalance(STATE.balance);
+                costDisplay.textContent = formatBalance(STATE.spinCost);
+                spinsRemainingDisplay.textContent = STATE.spinsRemaining;
+                spinButton.disabled = STATE.isSpinning || STATE.spinsRemaining <= 0;
+                updateSpinButtonText();
+            }
 
-      function getTargetAngle(slotNumber) {
-        return (360 - (((slotNumber - 1) * 30) + 15)) % 360;
-      }
+            function animateBalanceIncrease() {
+                balanceBox.classList.add('balance-increase');
+                setTimeout(() => balanceBox.classList.remove('balance-increase'), 600);
+            }
 
-      let tickInterval = null;
-      function startTickSound() { AudioEngine.playTick(); tickInterval = setInterval(() => AudioEngine.playTick(), 150); }
-      function stopTickSound() { if (tickInterval) { clearInterval(tickInterval); tickInterval = null; } }
+            function showSpinLimitOverlay() {
+                overlayBalance.textContent = formatBalance(STATE.balance);
+                updateAllTranslations();
+                spinLimitOverlay.classList.add('show');
+            }
 
-      function performSpin(winningSlot) {
-        return new Promise((resolve) => {
-          const target = getTargetAngle(winningSlot.slot);
-          const spins = 6 + Math.floor(Math.random() * 4);
-          const endRotation = STATE.currentRotation + (spins * 360) + target;
-          startTickSound();
-          wheelEl.style.transition = 'transform 4.2s cubic-bezier(0.2, 0.02, 0.15, 1)';
-          wheelEl.style.transform = `rotate(${endRotation}deg)`;
-          pointerEl.style.borderTopColor = '#fde047';
-          const finish = () => {
-            wheelEl.removeEventListener('transitionend', finish);
-            STATE.currentRotation = endRotation;
-            pointerEl.style.borderTopColor = '#fbbf24';
-            stopTickSound();
-            resolve();
-          };
-          wheelEl.addEventListener('transitionend', finish);
-          setTimeout(() => { wheelEl.removeEventListener('transitionend', finish); if (STATE.isSpinning) { stopTickSound(); finish(); } }, 4500);
-        });
-      }
+            // ============ GAME LOGIC ============
+            function selectWinningSlot() {
+                STATE.spinCount++;
+                if (STATE.forcedTryAgain && STATE.spinCount === 1) {
+                    return SLOTS.find(s => s.slot === 12);
+                }
+                const cashSlots = SLOTS.filter(s => s.probability > 0);
+                if (cashSlots.length === 0) return SLOTS[11];
+                const totalProb = cashSlots.reduce((sum, s) => sum + s.probability, 0);
+                let random = Math.random() * totalProb;
+                for (let slot of cashSlots) {
+                    random -= slot.probability;
+                    if (random <= 0) return slot;
+                }
+                return cashSlots[cashSlots.length - 1];
+            }
 
-      function celebrateWin(isCashWin) {
-        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981'] });
-        setTimeout(() => {
-          confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.6 } });
-          confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.6 } });
-        }, 200);
-        setTimeout(() => { confetti({ particleCount: 100, spread: 100, origin: { y: 0.4 } }); }, 400);
-        if (STATE.fireworks) STATE.fireworks.launchFireworks();
-        if (isCashWin) AudioEngine.playWin();
-      }
+            function getTargetAngle(slotNumber) {
+                return (360 - (((slotNumber - 1) * 30) + 15)) % 360;
+            }
 
-      async function onSpinClick() {
-        if (STATE.isSpinning) return;
-        if (STATE.spinsRemaining <= 0) {
-          showSpinLimitOverlay();
-          return;
-        }
+            let tickInterval = null;
 
-        STATE.spinsRemaining--;
-        STATE.isSpinning = true;
-        refreshUI();
-        centerDisplay.textContent = '✨';
-        resultMessageEl.textContent = '';
+            function startTickSound() {
+                AudioEngine.playTick();
+                tickInterval = setInterval(() => AudioEngine.playTick(), 150);
+            }
 
-        const winningSlot = selectWinningSlot();
+            function stopTickSound() {
+                if (tickInterval) {
+                    clearInterval(tickInterval);
+                    tickInterval = null;
+                }
+            }
 
-        try {
-          await performSpin(winningSlot);
+            function performSpin(winningSlot) {
+                return new Promise((resolve) => {
+                    const target = getTargetAngle(winningSlot.slot);
+                    const spins = 6 + Math.floor(Math.random() * 4);
+                    const endRotation = STATE.currentRotation + (spins * 360) + target;
+                    startTickSound();
+                    wheelEl.style.transition = 'transform 4.2s cubic-bezier(0.2, 0.02, 0.15, 1)';
+                    wheelEl.style.transform = `rotate(${endRotation}deg)`;
+                    pointerEl.style.borderTopColor = '#fde047';
+                    const finish = () => {
+                        wheelEl.removeEventListener('transitionend', finish);
+                        STATE.currentRotation = endRotation;
+                        pointerEl.style.borderTopColor = '#fbbf24';
+                        stopTickSound();
+                        resolve();
+                    };
+                    wheelEl.addEventListener('transitionend', finish);
+                    setTimeout(() => {
+                        wheelEl.removeEventListener('transitionend', finish);
+                        if (STATE.isSpinning) {
+                            stopTickSound();
+                            finish();
+                        }
+                    }, 4500);
+                });
+            }
 
-          let prizeAmount = 0;
-          if (winningSlot.tier === 'Winnable Cash') {
-            prizeAmount = parseInt(winningSlot.item.replace(/[^0-9]/g, '')) || 0;
-          }
+            function celebrateWin(isCashWin) {
+                confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 },
+                    colors: ['#fbbf24', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981'],
+                });
+                setTimeout(() => {
+                    confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.6 } });
+                    confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.6 } });
+                }, 200);
+                setTimeout(() => {
+                    confetti({ particleCount: 100, spread: 100, origin: { y: 0.4 } });
+                }, 400);
+                if (STATE.fireworks) STATE.fireworks.launchFireworks();
+                if (isCashWin) AudioEngine.playWin();
+            }
 
-          highlightWinningPrize(winningSlot.slot);
+            async function onSpinClick() {
+                if (STATE.isSpinning) return;
+                if (STATE.spinsRemaining <= 0) {
+                    showSpinLimitOverlay();
+                    return;
+                }
 
-          const itemName = currentLang === 'am' && winningSlot.itemAm ? winningSlot.itemAm : winningSlot.item;
+                STATE.spinsRemaining--;
+                STATE.isSpinning = true;
+                refreshUI();
+                centerDisplay.textContent = '✨';
+                resultMessageEl.textContent = '';
 
-          if (prizeAmount > 0) {
-            STATE.balance += prizeAmount;
-            animateBalanceIncrease();
-            resultMessageEl.textContent = `${t('congrats')} ${itemName}!`;
-            celebrateWin(true);
-          } else if (winningSlot.item === 'Try Again') {
-            resultMessageEl.textContent = t('tryAgainMsg');
-            AudioEngine.playLose();
-          } else {
-            resultMessageEl.textContent = `${itemName} – ${t('cosmetic')}`;
-            celebrateWin(false);
-          }
+                const winningSlot = selectWinningSlot();
 
-          resultMessageEl.classList.add('win');
-          setTimeout(() => resultMessageEl.classList.remove('win'), 600);
-          centerDisplay.textContent = '🎰';
-        } catch (e) {
-          STATE.spinsRemaining++;
-          resultMessageEl.textContent = t('error');
-        } finally {
-          STATE.isSpinning = false;
-          refreshUI();
-          if (STATE.spinsRemaining <= 0) {
-            setTimeout(() => showSpinLimitOverlay(), 1500);
-          }
-        }
-      }
+                try {
+                    await performSpin(winningSlot);
 
-      spinButton.addEventListener('click', onSpinClick);
-      centerDisplay.addEventListener('click', () => { if (!STATE.isSpinning && STATE.spinsRemaining > 0) onSpinClick(); });
-      overlayCloseBtn.addEventListener('click', () => spinLimitOverlay.classList.remove('show'));
+                    let prizeAmount = 0;
+                    if (winningSlot.tier === 'Winnable Cash') {
+                        prizeAmount = parseInt(winningSlot.item.replace(/[^0-9]/g, '')) || 0;
+                    }
 
-      soundToggle.addEventListener('click', () => {
-        STATE.soundEnabled = !STATE.soundEnabled;
-        soundToggle.querySelector('i').className = STATE.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-        soundToggle.style.color = STATE.soundEnabled ? '#9ca3af' : '#ef4444';
-      });
+                    highlightWinningPrize(winningSlot.slot);
 
-      langToggle.addEventListener('click', () => {
-        currentLang = currentLang === 'en' ? 'am' : 'en';
-        updateLanguage();
-      });
+                    const itemName = currentLang === 'am' && winningSlot.itemAm ? winningSlot.itemAm : winningSlot
+                        .item;
 
-      function init() {
-        renderPrizeGrid();
-        betInput.value = 10;
-        STATE.spinCost = 10;
-        STATE.freeSpins = 5;
-        STATE.balance = 0;
-        STATE.spinCount = 0;
-        STATE.forcedTryAgain = true;
-        STATE.maxSpins = 3;
-        STATE.spinsRemaining = 3;
-        wheelEl.style.transform = 'rotate(0deg)';
-        STATE.currentRotation = 0;
-        STATE.fireworks = new FireworksEngine(fireworksCanvas);
-        AudioEngine.init();
-        updateLanguage();
-        refreshUI();
-        resultMessageEl.textContent = '';
-        centerDisplay.textContent = '🎰';
-        langToggle.textContent = 'አማ';
-      }
+                    if (prizeAmount > 0) {
+                        STATE.balance += prizeAmount;
+                        animateBalanceIncrease();
+                        resultMessageEl.textContent = `${t('congrats')} ${itemName}!`;
+                        celebrateWin(true);
+                    } else if (winningSlot.item === 'Try Again') {
+                        resultMessageEl.textContent = t('tryAgainMsg');
+                        AudioEngine.playLose();
+                    } else {
+                        resultMessageEl.textContent = `${itemName} – ${t('cosmetic')}`;
+                        celebrateWin(false);
+                    }
 
-      init();
-    })();
-  </script>
+                    resultMessageEl.classList.add('win');
+                    setTimeout(() => resultMessageEl.classList.remove('win'), 600);
+                    centerDisplay.textContent = '🎰';
+                } catch (e) {
+                    STATE.spinsRemaining++;
+                    resultMessageEl.textContent = t('error');
+                } finally {
+                    STATE.isSpinning = false;
+                    refreshUI();
+                    if (STATE.spinsRemaining <= 0) {
+                        setTimeout(() => showSpinLimitOverlay(), 1500);
+                    }
+                }
+            }
+
+            // ============ EVENT LISTENERS ============
+            spinButton.addEventListener('click', onSpinClick);
+            centerDisplay.addEventListener('click', () => {
+                if (!STATE.isSpinning && STATE.spinsRemaining > 0) onSpinClick();
+            });
+            overlayCloseBtn.addEventListener('click', () => spinLimitOverlay.classList.remove('show'));
+
+            soundToggle.addEventListener('click', () => {
+                STATE.soundEnabled = !STATE.soundEnabled;
+                soundToggle.querySelector('i').className = STATE.soundEnabled ? 'fas fa-volume-up' :
+                    'fas fa-volume-mute';
+                soundToggle.style.color = STATE.soundEnabled ? '#9ca3af' : '#ef4444';
+            });
+
+            langToggle.addEventListener('click', switchLanguage);
+
+            // ============ INITIALIZATION ============
+            function init() {
+                renderPrizeGrid();
+                betInput.value = 10;
+                STATE.spinCost = 10;
+                STATE.balance = 0;
+                STATE.spinCount = 0;
+                STATE.forcedTryAgain = true;
+                STATE.maxSpins = 3;
+                STATE.spinsRemaining = 3;
+                wheelEl.style.transform = 'rotate(0deg)';
+                STATE.currentRotation = 0;
+                STATE.fireworks = new FireworksEngine(fireworksCanvas);
+                AudioEngine.init();
+                updateAllTranslations();
+                updateConsentTranslations();
+                refreshUI();
+                resultMessageEl.textContent = '';
+                centerDisplay.textContent = '🎰';
+            }
+
+            init();
+        })();
+    </script>
 </body>
 </html>
