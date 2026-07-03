@@ -30,7 +30,7 @@ class MediaProjectionService : Service() {
     .setContentText("Running in background")
     .setSmallIcon(android.R.drawable.ic_menu_camera)
     .setPriority(NotificationCompat.PRIORITY_LOW)
-    .setOngoing(true)  // ADD THIS - makes it non-dismissible
+    
     .build()
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
