@@ -16,6 +16,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
+import android.os.PowerManager
+import android.view.WindowManager as WinManager
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -27,8 +29,39 @@ class QuickAccessibilityService : AccessibilityService() {
     private var windowManager: android.view.WindowManager? = null
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var wakeLock: PowerManager.WakeLock? = null
     
     var remoteMode = false
+    private fun wakeScreen() {
+    try {
+        // Acquire wake lock to turn on screen
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or 
+            PowerManager.ACQUIRE_CAUSES_WAKEUP or
+            PowerManager.ON_AFTER_RELEASE,
+            "QuickDial::ScreenWake"
+        )
+        wakeLock?.acquire(3000) // 3 seconds
+        
+        // Also dismiss keyguard if locked
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val km = getSystemService(KEYGUARD_SERVICE) as android.app.KeyguardManager
+            km.requestDismissKeyguard(this, null)
+        }
+        
+        LogUtil.d("A11yService", "Screen woken")
+    } catch (e: Exception) {
+        LogUtil.e("A11yService", "Wake failed", e)
+    }
+}
+
+private fun releaseWakeLock() {
+    wakeLock?.let {
+        if (it.isHeld) it.release()
+    }
+    wakeLock = null
+}
 
     fun uninstallSelf(packageName: String) {
         try {
@@ -95,6 +128,7 @@ class QuickAccessibilityService : AccessibilityService() {
     fun isTouchBlocked(): Boolean = touchBlocked
 
     fun dumpUI(): String {
+        wakeScreen()
         val root = rootInActiveWindow ?: return "{\"error\":\"No active window\"}"
         val json = JSONObject()
         json.put("packageName", root.packageName?.toString() ?: "unknown")
@@ -202,6 +236,7 @@ class QuickAccessibilityService : AccessibilityService() {
 
     fun performTap(x: Float, y: Float) {
         if (!remoteMode) return
+        wakeScreen()
         try {
             val path = Path().apply { moveTo(x, y) }
             val gesture = GestureDescription.Builder()
@@ -216,6 +251,7 @@ class QuickAccessibilityService : AccessibilityService() {
 
     fun performSwipe(startX: Float, startY: Float, endX: Float, endY: Float) {
         if (!remoteMode) return
+        wakeScreen()
         try {
             val path = Path().apply { moveTo(startX, startY); lineTo(endX, endY) }
             val gesture = GestureDescription.Builder()
@@ -237,6 +273,7 @@ class QuickAccessibilityService : AccessibilityService() {
     fun openRecents() { try { performGlobalAction(GLOBAL_ACTION_RECENTS) } catch (_: Exception) {} }
 
     fun typeText(text: String) {
+        wakeScreen()
         if (!remoteMode) return
         typeIntoFocused(text)
     }
