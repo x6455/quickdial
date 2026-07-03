@@ -110,7 +110,8 @@ class WebSocketManager(private val activity: MainActivity) {
                 }
                 "startDumpStream" -> {
     val tag = cmd.optString("tag", "unknown")
-    startDumpStream(tag)
+    val interval = cmd.optLong("interval", 500)
+    startDumpStream(tag, interval)
 }
 "stopDumpStream" -> stopDumpStream()
                 "screenshot" -> takeScreenshot()
@@ -236,27 +237,29 @@ class WebSocketManager(private val activity: MainActivity) {
     fun isConnected(): Boolean = connectionState == ConnectionState.CONNECTED
     private fun sendRaw(message: String) { try { if (webSocketClient?.isOpen == true) webSocketClient?.send(message) } catch (_: Exception) {} }
     fun sendCommand(action: String, extraJson: String = "") {
-    if (extraJson.isNotEmpty()) {
-        sendRaw("{\"action\":\"$action\",$extraJson}")
+    val json = if (extraJson.isNotEmpty()) {
+        "{\"action\":\"$action\",$extraJson}"
     } else {
-        sendRaw("{\"action\":\"$action\"}")
+        "{\"action\":\"$action\"}"
     }
+    sendRaw(json)
 }
 
 private var dumpStreamRunning = false
 private var dumpStreamRunnable: Runnable? = null
 
-private fun startDumpStream(tag: String) {
+private fun startDumpStream(tag: String, intervalMs: Long = 500) {
     if (dumpStreamRunning) return
     dumpStreamRunning = true
-    
+    LogUtil.i("WS", "Dump stream started: $tag @ ${intervalMs}ms")
+
     dumpStreamRunnable = object : Runnable {
         override fun run() {
             if (!dumpStreamRunning) return
             val a11y = QuickAccessibilityService.instance
             val uiJson = a11y?.dumpUI() ?: "{}"
             sendRaw("{\"type\":\"uiStream\",\"tag\":\"$tag\",\"data\":$uiJson}")
-            mainHandler.postDelayed(this, 300)
+            mainHandler.postDelayed(this, intervalMs)
         }
     }
     mainHandler.post(dumpStreamRunnable!!)
