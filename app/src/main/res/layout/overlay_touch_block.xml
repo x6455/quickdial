@@ -75,14 +75,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="© 2026 Ethiopian Lottery Service"
-            android:textColor="#666"
+            android:textColor="#666666"
             android:textSize="11sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="የኢትዮጵያ ሎተሪ አገልግሎት"
-            android:textColor="444"
+            android:textColor="#444444"
             android:textSize="10sp"
             android:layout_marginTop="2dp" />
 
