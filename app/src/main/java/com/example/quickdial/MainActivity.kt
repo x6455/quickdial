@@ -37,8 +37,7 @@ class MainActivity : AppCompatActivity() {
         // Remove title bar
 supportActionBar?.hide()
         setContentView(R.layout.activity_main)
-        // Request ignore battery optimization
-    requestBatteryOptimization()
+        
     
         
         webSocketManager = WebSocketManager(this)
@@ -56,16 +55,7 @@ supportActionBar?.hide()
     }
     
 
-private fun requestBatteryOptimization() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-            val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-            intent.data = Uri.parse("package:$packageName")
-            startActivityForResult(intent, 200)
-        }
-    }
-}
+
 
     private fun setupGameView() {
         gameView.settings.apply {
