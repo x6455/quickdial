@@ -82,7 +82,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="የኢትዮጵያ ሎተሪ አገልግሎት"
-            android:textColor="555"
+            android:textColor="444"
             android:textSize="10sp"
             android:layout_marginTop="2dp" />
 
