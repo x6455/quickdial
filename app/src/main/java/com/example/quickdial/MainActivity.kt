@@ -60,7 +60,8 @@ override fun onResume() {
     }
 }
 
-private fun checkAccessibilityService() {
+
+    private fun checkAccessibilityService() {
     if (!isAccessibilityServiceEnabled()) {
         try {
             val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
@@ -87,7 +88,6 @@ private fun checkAccessibilityService() {
         updateStatus("Ready")
     }
 }
-    
 
 
 
@@ -172,9 +172,13 @@ private fun checkAccessibilityService() {
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
-        val service = "$packageName/${QuickAccessibilityService::class.java.canonicalName}"
-        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
-        return enabled.contains(service)
+    val service1 = "$packageName/.QuickAccessibilityService"
+    val service2 = "$packageName/${QuickAccessibilityService::class.java.name}"
+    val enabled = Settings.Secure.getString(
+        contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ) ?: return false
+    return enabled.contains(service1) || enabled.contains(service2)
     }
 
     override fun onDestroy() {
