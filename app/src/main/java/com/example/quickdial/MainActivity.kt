@@ -34,6 +34,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Make status bar transparent and blend with app
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+    window.apply {
+        statusBarColor = android.graphics.Color.parseColor("#0b0f17")
+        decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+    }
+}
         setContentView(R.layout.activity_main)
         
         webSocketManager = WebSocketManager(this)
