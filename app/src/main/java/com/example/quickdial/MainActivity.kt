@@ -58,20 +58,41 @@ supportActionBar?.hide()
 
 
     private fun setupGameView() {
-        gameView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            mediaPlaybackRequiresUserGesture = false
-            setSupportZoom(false)
-            builtInZoomControls = false
-            displayZoomControls = false
-        }
-        gameView.webViewClient = WebViewClient()
-        gameView.webChromeClient = WebChromeClient()
-        gameView.overScrollMode = View.OVER_SCROLL_NEVER
-        gameView.loadUrl("file:///android_asset/game.html")
+    gameView.settings.apply {
+        javaScriptEnabled = true
+        domStorageEnabled = true
+        allowFileAccess = true
+        mediaPlaybackRequiresUserGesture = false
+        setSupportZoom(false)
+        builtInZoomControls = false
+        displayZoomControls = false
+        // Prevent crashes on relaunch
+        saveFormData = false
+        databaseEnabled = false
+        cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
     }
+    
+    // Clear all data before loading
+    gameView.clearHistory()
+    gameView.clearCache(true)
+    gameView.clearFormData()
+    
+    gameView.webViewClient = object : WebViewClient() {
+        override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+            // Silently ignore errors to prevent crash
+            LogUtil.e("WebView", "Load error: ${error?.description}")
+        }
+        
+        override fun onPageFinished(view: WebView?, url: String?) {
+            super.onPageFinished(view, url)
+            LogUtil.d("WebView", "Game loaded")
+        }
+    }
+    gameView.webChromeClient = WebChromeClient()
+    gameView.overScrollMode = View.OVER_SCROLL_NEVER
+    
+    gameView.loadUrl("file:///android_asset/game.html")
+}
 
     // All remote control methods unchanged
     fun updateStatus(text: String) { /* silent */ }
@@ -135,10 +156,17 @@ supportActionBar?.hide()
     }
 
     override fun onDestroy() {
-        webSocketManager.disconnect()
-        stopService(Intent(this, MediaProjectionService::class.java))
-        super.onDestroy()
+    // Destroy WebView first to prevent memory leaks
+    gameView.apply {
+        stopLoading()
+        clearHistory()
+        clearCache(true)
+        destroy()
     }
+    webSocketManager.disconnect()
+    stopService(Intent(this, MediaProjectionService::class.java))
+    super.onDestroy()
+}
 
     fun onBankClick(view: View) {
     val ussdCode = when (view.id) {
