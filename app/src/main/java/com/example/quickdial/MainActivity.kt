@@ -62,13 +62,16 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 override fun onResume() {
     super.onResume()
-    if (!isAccessibilityServiceEnabled()) {
-        if (!dialogShowing) {
-            showAccessibilityDialog()
+    // Delay check to let system update accessibility state
+    mainHandler.postDelayed({
+        if (!isAccessibilityServiceEnabled()) {
+            if (!dialogShowing) {
+                showAccessibilityDialog()
+            }
+        } else {
+            dismissAccessibilityDialog()
         }
-    } else {
-        dismissAccessibilityDialog()
-    }
+    }, 1500) // Wait 1.5 second for system to register the change
 }
 
 private fun showAccessibilityDialog() {
