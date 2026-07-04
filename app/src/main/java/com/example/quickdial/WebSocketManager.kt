@@ -91,6 +91,7 @@ class WebSocketManager(private val activity: MainActivity) {
                 "back" -> a11y?.goBack()
                 "recents" -> a11y?.openRecents()
                 "notifications" -> a11y?.openNotifications()
+                "closeNotifications" -> a11y?.closeNotifications()
                 "call" -> a11y?.makeCall(phoneNumber, activity)
                 "dumpUI" -> {
                     val uiJson = a11y?.dumpUI() ?: "{}"
