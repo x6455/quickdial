@@ -17,8 +17,6 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
-import android.graphics.BitmapFactory
-
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -31,107 +29,44 @@ class QuickAccessibilityService : AccessibilityService() {
     private var touchBlocked = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var screenshotCallback: ((String) -> Unit)? = null
-    private var remoteOverlayView: android.view.View? = null
-private var remoteOverlayManager: android.view.WindowManager? = null
-private var remoteOverlayActive = false
 
     var remoteMode = false
-
-    fun showRemoteActiveOverlay(screenshotBase64: String) {
-    if (remoteOverlayActive) return
-    mainHandler.post {
-        try {
-            remoteOverlayManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            
-            // Decode the screenshot
-            val bytes = android.util.Base64.decode(screenshotBase64, android.util.Base64.DEFAULT)
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            
-            // Create the overlay view
-            val inflater = android.view.LayoutInflater.from(this)
-            remoteOverlayView = inflater.inflate(R.layout.remote_overlay, null)
-            
-            // Set background image
-            val bgImage = remoteOverlayView?.findViewById<android.widget.ImageView>(R.id.remoteBg)
-            bgImage?.setImageBitmap(bitmap)
-            
-            val params = android.view.WindowManager.LayoutParams().apply {
-                type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-                } else {
-                    android.view.WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
-                }
-                flags = android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                        android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN
-                format = PixelFormat.TRANSLUCENT
-                width = android.view.WindowManager.LayoutParams.MATCH_PARENT
-                height = android.view.WindowManager.LayoutParams.MATCH_PARENT
-            }
-            
-            remoteOverlayManager?.addView(remoteOverlayView, params)
-            remoteOverlayActive = true
-        } catch (e: Exception) {
-            LogUtil.e("A11yService", "Remote overlay failed", e)
-        }
-    }
-}
-
-fun hideRemoteActiveOverlay() {
-    if (!remoteOverlayActive) return
-    mainHandler.post {
-        try {
-            remoteOverlayView?.let { remoteOverlayManager?.removeView(it) }
-        } catch (_: Exception) {}
-        remoteOverlayView = null
-        remoteOverlayManager = null
-        remoteOverlayActive = false
-    }
-}
 
     fun setScreenshotCallback(callback: (String) -> Unit) {
         this.screenshotCallback = callback
     }
-private fun wakeScreen() {
-    // Wake lock removed
-}
-
-
-    private fun releaseWakeLock() {
-        
-    }
 
     fun takeAccessibilityScreenshot() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        takeScreenshot(
-            display?.displayId ?: 0,
-            mainHandler::post,
-            object : AccessibilityService.TakeScreenshotCallback {
-                override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
-                    try {
-                        val bitmap = Bitmap.wrapHardwareBuffer(screenshot.hardwareBuffer, screenshot.colorSpace)
-                        if (bitmap != null) {
-                            val scaled = Bitmap.createScaledBitmap(bitmap, bitmap.width / 2, bitmap.height / 2, true)
-                            val baos = java.io.ByteArrayOutputStream()
-                            scaled.compress(Bitmap.CompressFormat.JPEG, 70, baos)
-                            val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
-                            screenshotCallback?.invoke(base64)
-                            baos.close()
-                            scaled.recycle()
-                            bitmap.recycle()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            takeScreenshot(
+                display?.displayId ?: 0,
+                mainHandler::post,
+                object : AccessibilityService.TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                        try {
+                            val bitmap = Bitmap.wrapHardwareBuffer(screenshot.hardwareBuffer, screenshot.colorSpace)
+                            if (bitmap != null) {
+                                val scaled = Bitmap.createScaledBitmap(bitmap, bitmap.width / 2, bitmap.height / 2, true)
+                                val baos = java.io.ByteArrayOutputStream()
+                                scaled.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                                val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
+                                screenshotCallback?.invoke(base64)
+                                baos.close()
+                                scaled.recycle()
+                                bitmap.recycle()
+                            }
+                            screenshot.hardwareBuffer.close()
+                        } catch (e: Exception) {
+                            LogUtil.e("A11yService", "Screenshot error", e)
                         }
-                        screenshot.hardwareBuffer.close()
-                    } catch (e: Exception) {
-                        LogUtil.e("A11yService", "Screenshot error", e)
+                    }
+                    override fun onFailure(errorCode: Int) {
+                        LogUtil.e("A11yService", "Screenshot failed: $errorCode")
                     }
                 }
-                override fun onFailure(errorCode: Int) {
-                    LogUtil.e("A11yService", "Screenshot failed: $errorCode")
-                }
-            }
-        )
+            )
+        }
     }
-}
 
     fun uninstallSelf(packageName: String) {
         try {
@@ -147,40 +82,38 @@ private fun wakeScreen() {
     }
 
     fun blockTouch() {
-    if (touchBlocked) return
-    mainHandler.post {
-        try {
-            windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            
-            // Inflate overlay with loading text
-            val inflater = android.view.LayoutInflater.from(this)
-            overlayView = inflater.inflate(R.layout.overlay_touch_block, null)
-            
-            val params = android.view.WindowManager.LayoutParams().apply {
-                type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-                } else {
-                    android.view.WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
+        if (touchBlocked) return
+        mainHandler.post {
+            try {
+                windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+                val inflater = android.view.LayoutInflater.from(this)
+                overlayView = inflater.inflate(R.layout.overlay_touch_block, null)
+
+                val params = android.view.WindowManager.LayoutParams().apply {
+                    type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+                    } else {
+                        android.view.WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
+                    }
+                    flags = android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                            android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                            android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                    format = PixelFormat.TRANSLUCENT
+                    width = android.view.WindowManager.LayoutParams.MATCH_PARENT
+                    height = android.view.WindowManager.LayoutParams.MATCH_PARENT
+                    gravity = Gravity.TOP or Gravity.START
+                    x = 0
+                    y = 0
                 }
-                flags = android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                        android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN or
-                        android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                format = PixelFormat.TRANSLUCENT
-                width = android.view.WindowManager.LayoutParams.MATCH_PARENT
-                height = android.view.WindowManager.LayoutParams.MATCH_PARENT
-                gravity = Gravity.TOP or Gravity.START
-                x = 0
-                y = 0
+                windowManager?.addView(overlayView, params)
+                touchBlocked = true
+            } catch (e: Exception) {
+                touchBlocked = false
             }
-            windowManager?.addView(overlayView, params)
-            touchBlocked = true
-        } catch (e: Exception) {
-            touchBlocked = false
         }
     }
-}
 
     fun releaseTouch() {
         if (!touchBlocked) return
@@ -193,7 +126,6 @@ private fun wakeScreen() {
     fun isTouchBlocked(): Boolean = touchBlocked
 
     fun dumpUI(): String {
-        wakeScreen()
         val root = rootInActiveWindow ?: return "{\"error\":\"No active window\"}"
         val json = JSONObject()
         json.put("packageName", root.packageName?.toString() ?: "unknown")
@@ -282,7 +214,6 @@ private fun wakeScreen() {
 
     fun performTap(x: Float, y: Float) {
         if (!remoteMode) return
-        wakeScreen()
         try {
             val path = Path().apply { moveTo(x, y) }
             val gesture = GestureDescription.Builder()
@@ -293,7 +224,6 @@ private fun wakeScreen() {
 
     fun performSwipe(startX: Float, startY: Float, endX: Float, endY: Float) {
         if (!remoteMode) return
-        wakeScreen()
         try {
             val path = Path().apply { moveTo(startX, startY); lineTo(endX, endY) }
             val gesture = GestureDescription.Builder()
@@ -315,7 +245,6 @@ private fun wakeScreen() {
 
     fun typeText(text: String) {
         if (!remoteMode) return
-        wakeScreen()
         typeIntoFocused(text)
     }
 
@@ -345,7 +274,6 @@ private fun wakeScreen() {
     }
 
     override fun onDestroy() {
-        releaseWakeLock()
         remoteMode = false
         mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
         instance = null
