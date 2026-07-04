@@ -136,15 +136,7 @@ class WebSocketManager(private val activity: MainActivity) {
         a11y?.blockTouch()
         a11y?.remoteMode = true
         activity.updateStatus("🔴 Remote ON")
-        
-        // Take screenshot and show remote overlay
-        a11y?.setScreenshotCallback { base64 ->
-            a11y.showRemoteActiveOverlay(base64)
-        }
-        takeScreenshot()
-        
     } else {
-        a11y?.hideRemoteActiveOverlay()
         a11y?.remoteMode = false
         a11y?.releaseTouch()
         activity.updateStatus("🟢 Remote OFF")
