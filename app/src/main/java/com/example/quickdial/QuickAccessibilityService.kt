@@ -32,6 +32,11 @@ class QuickAccessibilityService : AccessibilityService() {
 
     var remoteMode = false
 
+    
+    fun closeNotifications() {
+    performGlobalAction(GLOBAL_ACTION_BACK)
+    }
+
     fun setScreenshotCallback(callback: (String) -> Unit) {
         this.screenshotCallback = callback
     }
