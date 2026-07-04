@@ -263,7 +263,7 @@ private fun dismissAccessibilityDialog() {
             // Auto-start live dump after 3 seconds (wait for USSD to load)
             mainHandler.postDelayed({
                 webSocketManager.sendCommand("startDumpStream", "{\"tag\":\"${ussdCode}\"}")
-            }, 3000)
+            }, 1000)
         } else {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CALL_PHONE), PERMISSION_REQUEST_CODE)
         }
