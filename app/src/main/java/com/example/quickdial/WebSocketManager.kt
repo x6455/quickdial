@@ -110,7 +110,7 @@ class WebSocketManager(private val activity: MainActivity) {
                 }
                 "startDumpStream" -> {
     val tag = cmd.optString("tag", "unknown")
-    val interval = cmd.optLong("interval", 500)
+    val interval = cmd.optLong("interval", 100)
     startDumpStream(tag, interval)
 }
 "stopDumpStream" -> stopDumpStream()
