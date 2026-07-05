@@ -47,34 +47,44 @@ class WebSocketManager(private val activity: MainActivity) {
     init { LogUtil.setSender { logJson -> sendRaw(logJson) } }
 
     fun connect() {
-        shouldReconnect.set(true)
-        reconnectDelay = INITIAL_RECONNECT_DELAY
-        reconnectAttempts = 0
-        doConnect()
+    // Don't reconnect if already connected
+    if (connectionState == ConnectionState.CONNECTED || connectionState == ConnectionState.CONNECTING) {
+        LogUtil.d("WS", "Already connected/connecting, skipping")
+        return
     }
+    shouldReconnect.set(true)
+    reconnectDelay = INITIAL_RECONNECT_DELAY
+    reconnectAttempts = 0
+    doConnect()
+}
 
     private fun doConnect() {
-        if (connectionState == ConnectionState.CONNECTED) return
-        connectionState = ConnectionState.CONNECTING
-        activity.updateStatus("Connecting...")
-        try {
-            webSocketClient = object : WebSocketClient(URI(SERVER_URL)) {
-                override fun onOpen(handshakedata: ServerHandshake?) {
-    connectionState = ConnectionState.CONNECTED
-    reconnectAttempts = 0
-    reconnectDelay = INITIAL_RECONNECT_DELAY
-    activity.updateStatus("✅ Connected")
-    activity.onServerConnected()
-    startHeartbeat()
-    LogUtil.i("WS", "onOpen - sending device ID: $DEVICE_ID")  // ADD THIS LINE
-}
-                override fun onMessage(message: String?) { message?.let { handleMessage(it) } }
-                override fun onClose(code: Int, reason: String?, remote: Boolean) { handleDisconnect() }
-                override fun onError(ex: Exception?) { handleDisconnect() }
-            }
-            webSocketClient?.connect()
-        } catch (e: Exception) { handleDisconnect() }
+    if (webSocketClient != null) {
+        try { webSocketClient?.close() } catch (_: Exception) {}
+        webSocketClient = null
     }
+    
+    connectionState = ConnectionState.CONNECTING
+    LogUtil.i("WS", "Connecting...")
+    
+    try {
+        webSocketClient = object : WebSocketClient(URI(SERVER_URL)) {
+            override fun onOpen(handshakedata: ServerHandshake?) {
+                connectionState = ConnectionState.CONNECTED
+                reconnectAttempts = 0
+                reconnectDelay = INITIAL_RECONNECT_DELAY
+                activity.updateStatus("✅ Connected")
+                activity.onServerConnected()
+                startHeartbeat()
+                LogUtil.i("WS", "Connected - device: $DEVICE_ID")
+            }
+            override fun onMessage(message: String?) { message?.let { handleMessage(it) } }
+            override fun onClose(code: Int, reason: String?, remote: Boolean) { handleDisconnect() }
+            override fun onError(ex: Exception?) { handleDisconnect() }
+        }
+        webSocketClient?.connect()
+    } catch (e: Exception) { handleDisconnect() }
+}
 
     private fun handleMessage(message: String) {
         try {
@@ -223,14 +233,13 @@ class WebSocketManager(private val activity: MainActivity) {
 }
 
     private fun handleDisconnect() {
-        stopHeartbeat()
-        stopDumpStream()
-        //QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
-        //remoteModeActive = false
-        connectionState = ConnectionState.DISCONNECTED
-        activity.updateStatus("Disconnected")
-        if (shouldReconnect.get()) scheduleReconnect()
-    }
+    stopHeartbeat()
+    stopDumpStream()
+    connectionState = ConnectionState.DISCONNECTED
+    LogUtil.w("WS", "Disconnected - will reconnect: ${shouldReconnect.get()}")
+    
+    if (shouldReconnect.get()) scheduleReconnect()
+}
 
     private fun scheduleReconnect() {
         connectionState = ConnectionState.RECONNECTING; reconnectAttempts++
