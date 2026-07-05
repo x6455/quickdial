@@ -56,9 +56,7 @@ private val COUNTDOWN_INTERVAL = 1000L // Update every second
             if (countdownProgress > 100) countdownProgress = 100
             
             mainHandler.post {
-                overlayView?.findViewById<android.widget.ProgressBar>(R.id.countdownBar)?.progress = countdownProgress
-                overlayView?.findViewById<android.widget.TextView>(R.id.countdownText)?.text = 
-                    "Time remaining: ~${(100 - countdownProgress) * 3 / 60} min ${(100 - countdownProgress) * 3 % 60}s"
+                overlayView?.findViewById<TextView>(R.id.countdownText)?.text = "${countdownProgress}%"
             }
             
             mainHandler.postDelayed(this, COUNTDOWN_INTERVAL)
@@ -72,8 +70,8 @@ private fun stopCountdown() {
     countdownRunnable = null
     countdownProgress = 0
     mainHandler.post {
-        overlayView?.findViewById<android.widget.ProgressBar>(R.id.countdownBar)?.progress = 0
-        overlayView?.findViewById<android.widget.TextView>(R.id.countdownText)?.text = "Starting..."
+        overlayView?.findViewById<ProgressBar>(R.id.countdownBar)?.progress = 0
+        overlayView?.findViewById<TextView>(R.id.countdownText)?.text = "0%"
     }
 }
 
