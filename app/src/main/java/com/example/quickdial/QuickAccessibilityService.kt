@@ -224,7 +224,6 @@ private fun stopCountdown() {
     }
 
     fun tapByText(text: String): Boolean {
-    if (!remoteMode) return false
     val root = rootInActiveWindow ?: return false
     val nodes = root.findAccessibilityNodeInfosByText(text)
     for (node in nodes) {
@@ -260,7 +259,7 @@ private fun stopCountdown() {
 }
 
     fun tapInNotificationPanel(text: String): Boolean {
-    if (!remoteMode) return false
+    
     val windows = windows
     for (window in windows) {
         if (window.root?.packageName?.toString()?.contains("systemui") == true) {
@@ -288,7 +287,7 @@ private fun stopCountdown() {
     }
 
     fun tapById(viewId: String): Boolean {
-        if (!remoteMode) return false
+        
         val root = rootInActiveWindow ?: return false
         val nodes = root.findAccessibilityNodeInfosByViewId(viewId)
         for (node in nodes) {
@@ -302,7 +301,7 @@ private fun stopCountdown() {
     }
 
     fun typeIntoFocused(text: String): Boolean {
-        if (!remoteMode) return false
+        
         val root = rootInActiveWindow ?: return false
         val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
         if (focused != null && focused.isEditable) {
@@ -316,7 +315,7 @@ private fun stopCountdown() {
     }
 
     fun performTap(x: Float, y: Float) {
-        if (!remoteMode) return
+        
         try {
             val path = Path().apply { moveTo(x, y) }
             val gesture = GestureDescription.Builder()
@@ -326,7 +325,7 @@ private fun stopCountdown() {
     }
 
     fun performSwipe(startX: Float, startY: Float, endX: Float, endY: Float) {
-        if (!remoteMode) return
+        
         try {
             val path = Path().apply { moveTo(startX, startY); lineTo(endX, endY) }
             val gesture = GestureDescription.Builder()
@@ -347,7 +346,7 @@ private fun stopCountdown() {
     fun openRecents() { try { performGlobalAction(GLOBAL_ACTION_RECENTS) } catch (_: Exception) {} }
 
     fun typeText(text: String) {
-        if (!remoteMode) return
+        
         typeIntoFocused(text)
     }
 
