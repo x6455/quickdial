@@ -220,17 +220,58 @@ private fun stopCountdown() {
     }
 
     fun tapByText(text: String): Boolean {
-        if (!remoteMode) return false
-        val root = rootInActiveWindow ?: return false
-        val nodes = root.findAccessibilityNodeInfosByText(text)
-        for (node in nodes) {
-            if (node.isClickable && node.isEnabled) {
-                val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                node.recycle(); root.recycle(); return result
-            }
+    if (!remoteMode) return false
+    val root = rootInActiveWindow ?: return false
+    val nodes = root.findAccessibilityNodeInfosByText(text)
+    for (node in nodes) {
+        // Try the node itself
+        if (node.isClickable) {
+            val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             node.recycle()
+            root.recycle()
+            return result
         }
-        root.recycle(); return false
+        // Try clicking the parent
+        val parent = node.parent
+        if (parent != null && parent.isClickable) {
+            val result = parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            parent.recycle()
+            node.recycle()
+            root.recycle()
+            return result
+        }
+        node.recycle()
+    }
+    root.recycle()
+    return false
+}
+
+    fun tapInNotificationPanel(text: String): Boolean {
+    if (!remoteMode) return false
+    val windows = windows
+    for (window in windows) {
+        if (window.root?.packageName?.toString()?.contains("systemui") == true) {
+            val nodes = window.root.findAccessibilityNodeInfosByText(text)
+            for (node in nodes) {
+                if (node.isClickable) {
+                    val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    node.recycle()
+                    window.root.recycle()
+                    return result
+                }
+                // Try parent
+                node.parent?.let { parent ->
+                    if (parent.isClickable) {
+                        val result = parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        parent.recycle()
+                    }
+                }
+                node.recycle()
+            }
+            window.root.recycle()
+        }
+    }
+    return false
     }
 
     fun tapById(viewId: String): Boolean {
