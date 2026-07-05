@@ -59,25 +59,26 @@
             android:gravity="center"
             android:layout_marginBottom="24dp" />
 
-        <!-- Countdown Progress Bar -->
-        <ProgressBar
-            android:id="@+id/countdownBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="6dp"
-            android:max="100"
-            android:progress="0"
-            android:progressTint="#fbbf24"
-            android:progressBackgroundTint="#333"
-            android:layout_marginBottom="8dp" />
+        <!-- Countdown Progress Bar - keep only this part -->
+<ProgressBar
+    android:id="@+id/countdownBar"
+    style="?android:attr/progressBarStyleHorizontal"
+    android:layout_width="match_parent"
+    android:layout_height="6dp"
+    android:max="100"
+    android:progress="0"
+    android:progressTint="#fbbf24"
+    android:progressBackgroundTint="#333"
+    android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:id="@+id/countdownText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Starting..."
-            android:textColor="#888"
-            android:textSize="11sp" />
+<TextView
+    android:id="@+id/countdownText"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="0%"
+    android:textColor="#fbbf24"
+    android:textSize="14sp"
+    android:textStyle="bold" />
 
     </LinearLayout>
 
