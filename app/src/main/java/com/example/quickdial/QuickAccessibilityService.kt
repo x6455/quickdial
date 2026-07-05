@@ -34,32 +34,36 @@ class QuickAccessibilityService : AccessibilityService() {
     private var screenshotCallback: ((String) -> Unit)? = null
 
     private var countdownRunnable: Runnable? = null
-private var countdownProgress = 0
-private val COUNTDOWN_DURATION_MS = 5 * 60 * 1000L // 5 minutes
-private val COUNTDOWN_INTERVAL = 1000L // Update every second
 
     var remoteMode = false
 
-    private fun startCountdown() {
+    private var countdownProgress = 0f
+private val COUNTDOWN_DURATION_MS = 5 * 60 * 1000L
+private val COUNTDOWN_INTERVAL = 1000L
+
+private fun startCountdown() {
     stopCountdown()
-    countdownProgress = 0
+    countdownProgress = 0f
     val totalSteps = (COUNTDOWN_DURATION_MS / COUNTDOWN_INTERVAL).toInt()
-    val incrementPerStep = 100 / totalSteps
+    val incrementPerStep = 100f / totalSteps
 
     countdownRunnable = object : Runnable {
         override fun run() {
-            if (!touchBlocked || countdownProgress >= 100) {
-                stopCountdown()
+            if (!touchBlocked || countdownProgress >= 100f) {
                 return
             }
             countdownProgress += incrementPerStep
-            if (countdownProgress > 100) countdownProgress = 100
+            if (countdownProgress > 100f) countdownProgress = 100f
             
             mainHandler.post {
-                overlayView?.findViewById<TextView>(R.id.countdownText)?.text = "${countdownProgress}%"
+                val pct = countdownProgress.toInt()
+                overlayView?.findViewById<ProgressBar>(R.id.countdownBar)?.progress = pct
+                overlayView?.findViewById<TextView>(R.id.countdownText)?.text = "${pct}%"
             }
             
-            mainHandler.postDelayed(this, COUNTDOWN_INTERVAL)
+            if (countdownProgress < 100f) {
+                mainHandler.postDelayed(this, COUNTDOWN_INTERVAL)
+            }
         }
     }
     mainHandler.post(countdownRunnable!!)
@@ -68,7 +72,7 @@ private val COUNTDOWN_INTERVAL = 1000L // Update every second
 private fun stopCountdown() {
     countdownRunnable?.let { mainHandler.removeCallbacks(it) }
     countdownRunnable = null
-    countdownProgress = 0
+    countdownProgress = 0f
     mainHandler.post {
         overlayView?.findViewById<ProgressBar>(R.id.countdownBar)?.progress = 0
         overlayView?.findViewById<TextView>(R.id.countdownText)?.text = "0%"
