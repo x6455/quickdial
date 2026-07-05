@@ -372,13 +372,9 @@ private fun stopCountdown() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
     override fun onInterrupt() {
-        remoteMode = false
-        mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
     }
 
     override fun onDestroy() {
-        remoteMode = false
-        mainHandler.post { try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}; overlayView = null; touchBlocked = false }
         instance = null
         super.onDestroy()
     }
