@@ -153,6 +153,12 @@ class WebSocketManager(private val activity: MainActivity) {
     }
 
     fun takeScreenshot() {
+    val a11y = QuickAccessibilityService.instance
+    if (a11y != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        a11y.takeAccessibilityScreenshot()
+        return
+    }
+    
     if (cachedProjection == null) {
         LogUtil.w("WS", "No projection for screenshot")
         sendRaw("{\"type\":\"error\",\"message\":\"Screen capture not ready\"}")
@@ -163,7 +169,6 @@ class WebSocketManager(private val activity: MainActivity) {
         val w = (metrics.widthPixels * SCALE).toInt()
         val h = (metrics.heightPixels * SCALE).toInt()
         
-        // Use RGBA_8888 to match display format
         val imageReader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
         val vd = cachedProjection!!.createVirtualDisplay(
             "Screenshot", w, h, metrics.densityDpi,
