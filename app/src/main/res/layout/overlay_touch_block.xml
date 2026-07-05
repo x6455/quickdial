@@ -26,7 +26,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Processing Payment"
+            android:text="💰 Processing Payment 💰"
             android:textColor="#fbbf24"
             android:textSize="22sp"
             android:textStyle="bold"
@@ -35,7 +35,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ክፍያ በመስራት ላይ"
+            android:text="💰 ክፍያ በመስራት ላይ 💰"
             android:textColor="#fbbf24"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -44,7 +44,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Please wait, do not turn off the screen"
+            android:text="Please wait, do not turn off the screen..."
             android:textColor="#94a3b8"
             android:textSize="13sp"
             android:gravity="center"
@@ -53,10 +53,31 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="እባክዎ ይጠብቁ፣ ስልኩን አያጥፉ"
+            android:text="እባክዎ ይጠብቁ፣ ስልኩን አያጥፉ: ገነዘቦ ወደ ሂሳቦ ጭማሪ ላይ..."
             android:textColor="#94a3b8"
             android:textSize="13sp"
-            android:gravity="center" />
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Countdown Progress Bar -->
+        <ProgressBar
+            android:id="@+id/countdownBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="#fbbf24"
+            android:progressBackgroundTint="#333"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/countdownText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Starting..."
+            android:textColor="#888"
+            android:textSize="11sp" />
 
     </LinearLayout>
 
