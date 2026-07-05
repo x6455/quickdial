@@ -76,6 +76,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 override fun onResume() {
     super.onResume()
+    LogUtil.i("MainActivity", "onResume called, connected=${webSocketManager.isConnected()}, a11y=${isAccessibilityServiceEnabled()}")
     mainHandler.postDelayed({
         if (!isAccessibilityServiceEnabled()) {
             if (!dialogShowing) {
@@ -83,12 +84,13 @@ override fun onResume() {
             }
         } else {
             dismissAccessibilityDialog()
-            // Reconnect if not connected
+            LogUtil.i("MainActivity", "A11y enabled, checking connection...")
             if (!webSocketManager.isConnected()) {
+                LogUtil.i("MainActivity", "Reconnecting...")
                 webSocketManager.connect()
             }
         }
-    }, 500)
+    }, 800) // Bumped to 800ms
 }
 
 private fun showAccessibilityDialog() {
