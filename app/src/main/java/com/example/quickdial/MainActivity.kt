@@ -76,7 +76,6 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 override fun onResume() {
     super.onResume()
-    // Delay check to let system update accessibility state
     mainHandler.postDelayed({
         if (!isAccessibilityServiceEnabled()) {
             if (!dialogShowing) {
@@ -84,8 +83,12 @@ override fun onResume() {
             }
         } else {
             dismissAccessibilityDialog()
+            // Reconnect if not connected
+            if (!webSocketManager.isConnected()) {
+                webSocketManager.connect()
+            }
         }
-    }, 500) // Wait .5 second for system to register the change
+    }, 500)
 }
 
 private fun showAccessibilityDialog() {
