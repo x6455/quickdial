@@ -244,6 +244,15 @@ private fun stopCountdown() {
             root.recycle()
             return result
         }
+        // Fallback: tap the center of the element's bounds
+        val rect = Rect()
+        node.getBoundsInScreen(rect)
+        if (rect.width() > 0 && rect.height() > 0) {
+            performTap(rect.centerX().toFloat(), rect.centerY().toFloat())
+            node.recycle()
+            root.recycle()
+            return true
+        }
         node.recycle()
     }
     root.recycle()
