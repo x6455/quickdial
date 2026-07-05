@@ -224,8 +224,8 @@ class WebSocketManager(private val activity: MainActivity) {
     private fun handleDisconnect() {
         stopHeartbeat()
         stopDumpStream()
-        QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
-        remoteModeActive = false
+        //QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
+        //remoteModeActive = false
         connectionState = ConnectionState.DISCONNECTED
         activity.updateStatus("Disconnected")
         if (shouldReconnect.get()) scheduleReconnect()
