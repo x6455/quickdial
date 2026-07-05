@@ -288,7 +288,7 @@ private fun stopDumpStream() {
 
     fun disconnect() {
         shouldReconnect.set(false); stopHeartbeat()
-        QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
+     //   QuickAccessibilityService.instance?.let { it.remoteMode = false; it.releaseTouch() }
         cachedProjection = null
         try { webSocketClient?.close() } catch (_: Exception) {}
         connectionState = ConnectionState.DISCONNECTED
