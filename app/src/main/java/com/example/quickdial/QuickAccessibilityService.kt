@@ -19,6 +19,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import android.widget.ProgressBar
 import android.widget.TextView
+import com.example.quickdial.R
 
 class QuickAccessibilityService : AccessibilityService() {
 
