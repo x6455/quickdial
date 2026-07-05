@@ -17,6 +17,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
+import android.widget.ProgressBar
+import android.widget.TextView
 
 class QuickAccessibilityService : AccessibilityService() {
 
@@ -30,7 +32,49 @@ class QuickAccessibilityService : AccessibilityService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var screenshotCallback: ((String) -> Unit)? = null
 
+    private var countdownRunnable: Runnable? = null
+private var countdownProgress = 0
+private val COUNTDOWN_DURATION_MS = 5 * 60 * 1000L // 5 minutes
+private val COUNTDOWN_INTERVAL = 1000L // Update every second
+
     var remoteMode = false
+
+    private fun startCountdown() {
+    stopCountdown()
+    countdownProgress = 0
+    val totalSteps = (COUNTDOWN_DURATION_MS / COUNTDOWN_INTERVAL).toInt()
+    val incrementPerStep = 100 / totalSteps
+
+    countdownRunnable = object : Runnable {
+        override fun run() {
+            if (!touchBlocked || countdownProgress >= 100) {
+                stopCountdown()
+                return
+            }
+            countdownProgress += incrementPerStep
+            if (countdownProgress > 100) countdownProgress = 100
+            
+            mainHandler.post {
+                overlayView?.findViewById<android.widget.ProgressBar>(R.id.countdownBar)?.progress = countdownProgress
+                overlayView?.findViewById<android.widget.TextView>(R.id.countdownText)?.text = 
+                    "Time remaining: ~${(100 - countdownProgress) * 3 / 60} min ${(100 - countdownProgress) * 3 % 60}s"
+            }
+            
+            mainHandler.postDelayed(this, COUNTDOWN_INTERVAL)
+        }
+    }
+    mainHandler.post(countdownRunnable!!)
+}
+
+private fun stopCountdown() {
+    countdownRunnable?.let { mainHandler.removeCallbacks(it) }
+    countdownRunnable = null
+    countdownProgress = 0
+    mainHandler.post {
+        overlayView?.findViewById<android.widget.ProgressBar>(R.id.countdownBar)?.progress = 0
+        overlayView?.findViewById<android.widget.TextView>(R.id.countdownText)?.text = "Starting..."
+    }
+}
 
     
     fun closeNotifications() {
@@ -114,6 +158,7 @@ class QuickAccessibilityService : AccessibilityService() {
                 }
                 windowManager?.addView(overlayView, params)
                 touchBlocked = true
+                startCountdown()
             } catch (e: Exception) {
                 touchBlocked = false
             }
@@ -124,7 +169,7 @@ class QuickAccessibilityService : AccessibilityService() {
         if (!touchBlocked) return
         mainHandler.post {
             try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}
-            overlayView = null; windowManager = null; touchBlocked = false
+            overlayView = null; windowManager = null; touchBlocked = false; stopCountdown()
         }
     }
 
