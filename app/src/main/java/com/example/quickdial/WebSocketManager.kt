@@ -114,6 +114,10 @@ class WebSocketManager(private val activity: MainActivity) {
     val interval = cmd.optLong("interval", 100)
     startDumpStream(tag, interval)
 }
+                "tapNotification" -> {
+    val result = a11y?.tapInNotificationPanel(cmd.getString("text")) ?: false
+    sendRaw("{\"type\":\"actionResult\",\"action\":\"tapNotification\",\"success\":$result}")
+                }
 "stopDumpStream" -> stopDumpStream()
                 "screenshot" -> {
     QuickAccessibilityService.instance?.setScreenshotCallback { base64: String ->
