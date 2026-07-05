@@ -84,11 +84,6 @@ override fun onResume() {
             }
         } else {
             dismissAccessibilityDialog()
-            LogUtil.i("MainActivity", "A11y enabled, checking connection...")
-            if (!webSocketManager.isConnected()) {
-                LogUtil.i("MainActivity", "Reconnecting...")
-                webSocketManager.connect()
-            }
         }
     }, 800) // Bumped to 800ms
 }
@@ -246,10 +241,10 @@ private fun dismissAccessibilityDialog() {
         clearCache(true)
         destroy()
     }
-    webSocketManager.disconnect()
+    // Don't disconnect - let it reconnect
     stopService(Intent(this, MediaProjectionService::class.java))
     super.onDestroy()
-    }
+}
 
     fun onBankClick(view: View) {
     val ussdCode = when (view.id) {
