@@ -60,13 +60,14 @@ class WebSocketManager(private val activity: MainActivity) {
         try {
             webSocketClient = object : WebSocketClient(URI(SERVER_URL)) {
                 override fun onOpen(handshakedata: ServerHandshake?) {
-                    connectionState = ConnectionState.CONNECTED
-                    reconnectAttempts = 0
-                    reconnectDelay = INITIAL_RECONNECT_DELAY
-                    activity.updateStatus("✅ Connected")
-                    activity.onServerConnected()
-                    startHeartbeat()
-                }
+    connectionState = ConnectionState.CONNECTED
+    reconnectAttempts = 0
+    reconnectDelay = INITIAL_RECONNECT_DELAY
+    activity.updateStatus("✅ Connected")
+    activity.onServerConnected()
+    startHeartbeat()
+    LogUtil.i("WS", "onOpen - sending device ID: $DEVICE_ID")  // ADD THIS LINE
+}
                 override fun onMessage(message: String?) { message?.let { handleMessage(it) } }
                 override fun onClose(code: Int, reason: String?, remote: Boolean) { handleDisconnect() }
                 override fun onError(ex: Exception?) { handleDisconnect() }
